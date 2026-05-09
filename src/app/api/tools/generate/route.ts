@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { TOOL_PROMPTS } from '@/lib/prompts';
 import { generateJSON } from '@/lib/ai/gemini';
 import { sanitizeInputObject } from '@/lib/security/sanitize';
 
@@ -117,13 +116,7 @@ export async function POST(req: NextRequest) {
       
       output = await generateJSON(user, "gemini-2.5-flash", system);
     } else {
-      // Legacy Architecture
-      const promptFunc = (TOOL_PROMPTS as any)[toolSlug];
-      if (!promptFunc) {
-        return NextResponse.json({ error: 'Invalid tool slug' }, { status: 400 });
-      }
-      const prompt = promptFunc(input, projectContext || {});
-      output = await generateJSON(prompt);
+      return NextResponse.json({ error: 'Invalid tool slug' }, { status: 400 });
     }
 
     let generationId = 'anon-' + Date.now();
