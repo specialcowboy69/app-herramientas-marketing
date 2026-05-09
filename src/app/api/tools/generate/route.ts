@@ -72,13 +72,59 @@ export async function POST(req: NextRequest) {
       projectContext = projectDoc.data();
     }
 
-    const promptFunc = (TOOL_PROMPTS as any)[toolSlug];
-    if (!promptFunc) {
-      return NextResponse.json({ error: 'Invalid tool slug' }, { status: 400 });
+    let output;
+    
+    if (toolSlug === 'ads-generator' || toolSlug === 'cta-generator' || toolSlug === 'naming-slogan' || toolSlug === 'product-description') {
+      // AGENTE: Copywriter
+      const { CopywriterAgent } = await import('@/lib/agents/copywriter/copywriter_tools');
+      let system, user;
+      
+      if (toolSlug === 'ads-generator') {
+        ({ system, user } = await CopywriterAgent.prepareAdsPrompt(input, projectContext || {}));
+      } else if (toolSlug === 'cta-generator') {
+        ({ system, user } = await CopywriterAgent.prepareCTAPrompt(input, projectContext || {}));
+      } else if (toolSlug === 'naming-slogan') {
+        ({ system, user } = await CopywriterAgent.prepareNamingPrompt(input, projectContext || {}));
+      } else {
+        ({ system, user } = await CopywriterAgent.prepareProductDescriptionPrompt(input, projectContext || {}));
+      }
+      
+      output = await generateJSON(user, "gemini-2.5-flash", system);
+    } else if (toolSlug === 'seo-brief' || toolSlug === 'blog-toolkit') {
+      // AGENTE: SEO Specialist
+      const { SEOSpecialistAgent } = await import('@/lib/agents/seo_specialist/seo_tools');
+      let system, user;
+      
+      if (toolSlug === 'seo-brief') {
+        ({ system, user } = await SEOSpecialistAgent.prepareSEOBriefPrompt(input, projectContext || {}));
+      } else {
+        ({ system, user } = await SEOSpecialistAgent.prepareBlogToolkitPrompt(input, projectContext || {}));
+      }
+      
+      output = await generateJSON(user, "gemini-2.5-flash", system);
+    } else if (toolSlug === 'business-idea' || toolSlug === 'customer-avatar' || toolSlug === 'pain-points') {
+      // AGENTE: Business Strategist
+      const { BusinessStrategistAgent } = await import('@/lib/agents/business_strategist/strategist_tools');
+      let system, user;
+      
+      if (toolSlug === 'business-idea') {
+        ({ system, user } = await BusinessStrategistAgent.prepareBusinessIdeaPrompt(input, projectContext || {}));
+      } else if (toolSlug === 'customer-avatar') {
+        ({ system, user } = await BusinessStrategistAgent.prepareCustomerAvatarPrompt(input, projectContext || {}));
+      } else {
+        ({ system, user } = await BusinessStrategistAgent.preparePainPointsPrompt(input, projectContext || {}));
+      }
+      
+      output = await generateJSON(user, "gemini-2.5-flash", system);
+    } else {
+      // Legacy Architecture
+      const promptFunc = (TOOL_PROMPTS as any)[toolSlug];
+      if (!promptFunc) {
+        return NextResponse.json({ error: 'Invalid tool slug' }, { status: 400 });
+      }
+      const prompt = promptFunc(input, projectContext || {});
+      output = await generateJSON(prompt);
     }
-
-    const prompt = promptFunc(input, projectContext || {});
-    const output = await generateJSON(prompt);
 
     let generationId = 'anon-' + Date.now();
 

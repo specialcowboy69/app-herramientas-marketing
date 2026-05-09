@@ -2,12 +2,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-export const getModel = (modelName: string = "gemini-2.5-flash") => {
-  return genAI.getGenerativeModel({ model: modelName });
+export const getModel = (modelName: string = "gemini-2.5-flash", systemInstruction?: string) => {
+  return genAI.getGenerativeModel({ 
+    model: modelName,
+    systemInstruction: systemInstruction ? { role: "system", parts: [{ text: systemInstruction }] } : undefined
+  });
 };
 
-export const generateJSON = async (prompt: string, modelName: string = "gemini-2.5-flash") => {
-  const model = getModel(modelName);
+export const generateJSON = async (prompt: string, modelName: string = "gemini-2.5-flash", systemInstruction?: string) => {
+  const model = getModel(modelName, systemInstruction);
   
   const result = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
