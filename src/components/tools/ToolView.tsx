@@ -1,0 +1,575 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/lib/firebase/auth-context';
+import { getUserProjects, getProject } from '@/lib/firebase/firestore';
+import { Project } from '@/lib/types';
+import { Shell } from '@/components/layout/Shell';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import { auth } from '@/lib/firebase/client';
+import { Loader2, Sparkles, Copy, Star, Plus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
+
+interface ToolViewProps {
+  title: string;
+  description: string;
+  toolSlug: string;
+  fields: {
+    name: string;
+    label: string;
+    type: 'text' | 'textarea' | 'select';
+    placeholder?: string;
+    options?: { label: string; value: string }[];
+  }[];
+  initialValues: Record<string, string>;
+}
+
+export function ToolView({ title, description, toolSlug, fields, initialValues }: ToolViewProps) {
+  const { user, userData } = useAuth();
+  const searchParams = useSearchParams();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(searchParams.get('projectId') || '');
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [formData, setFormData] = useState(initialValues);
+  const [result, setResult] = useState<any>(null);
+  const [lastGenerationId, setLastGenerationId] = useState<string | null>(null);
+  const [favoritedItems, setFavoritedItems] = useState<Set<string>>(new Set());
+
+  const isPremium = userData?.subscriptionStatus === 'active';
+  const today = new Date().toISOString().split('T')[0];
+  const isLimitReached = !isPremium && 
+    userData?.lastGenerationDate === today && 
+    (userData?.dailyGenerationsCount || 0) >= 5;
+
+  const freeUsesLeft = !isPremium ? Math.max(0, 5 - (userData?.lastGenerationDate === today ? (userData?.dailyGenerationsCount || 0) : 0)) : null;
+
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      getUserProjects(user.uid).then((data) => {
+        setProjects(data);
+        if (!selectedProjectId && data.length > 0) {
+          setSelectedProjectId(data[0].id);
+        }
+        setLoading(false);
+      });
+    }
+  }, [user]);
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user && !selectedProjectId) {
+      toast.error('Por favor selecciona un proyecto');
+      return;
+    }
+    
+    // Front-end check for premium/limits
+    if (user && isLimitReached) {
+      toast.error('Has alcanzado límite diario gratuito. Suscríbete para continuar.');
+      return;
+    }
+
+    setGenerating(true);
+    // ... remaining generate code
+    try {
+      const idToken = user ? await auth.currentUser?.getIdToken() : undefined;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+      
+      const response = await fetch('/api/tools/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          projectId: user && selectedProjectId ? selectedProjectId : 'anonymous',
+          toolSlug,
+          input: formData,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      setResult(data.output);
+      setLastGenerationId(data.generationId);
+      setFavoritedItems(new Set());
+      toast.success('Contenido generado con éxito');
+    } catch (error: any) {
+      toast.error('Error al generar: ' + error.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const saveAsFavorite = async (itemPayload: any, itemId: string) => {
+    if (!user) {
+      toast.error('Debes iniciar sesión para guardar favoritos');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/generations/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`,
+        },
+        body: JSON.stringify({ 
+          toolSlug, 
+          outputPayload: itemPayload,
+          projectId: selectedProjectId 
+        }),
+      });
+      
+      if (response.ok) {
+        setFavoritedItems(prev => new Set(prev).add(itemId));
+        toast.success('Añadido a favoritos');
+      }
+    } catch (error) {
+      toast.error('Error al guardar favorito');
+    }
+  };
+
+  const saveAsDocument = async (title: string, content: string) => {
+    if (!selectedProjectId) return;
+    try {
+      const response = await fetch(`/api/projects/${selectedProjectId}/documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`,
+        },
+        body: JSON.stringify({ title, content }),
+      });
+      if (response.ok) {
+        toast.success('Guardado en el proyecto');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Error del servidor');
+      }
+    } catch (error: any) {
+      toast.error('Error al guardar: ' + error.message);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado al portapapeles');
+  };
+
+  return (
+    <Shell requireAuth={false}>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
+            <p className="text-muted-foreground">{description}</p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración</CardTitle>
+              <CardDescription>Selecciona un proyecto y completa los campos.</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleGenerate}>
+              <CardContent className="space-y-4">
+                {!user ? (
+                  <div className="bg-primary/5 border border-primary/20 p-4 rounded-md text-sm text-foreground mb-4">
+                    Para usar esta herramienta necesitas iniciar sesión y tener una suscripción activa. <Link href="/login" className="underline font-medium text-primary">Iniciar sesión</Link>.
+                  </div>
+                ) : isLimitReached ? (
+                  <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-md text-sm text-foreground mb-4 flex flex-col gap-2">
+                    <p className="font-bold text-destructive">Límite diario alcanzado</p>
+                    <p>Has consumido tus 5 usos gratuitos diarios de herramientas IA. Suscríbete para uso ilimitado.</p>
+                    <Button variant="default" size="sm" className="w-max mt-2" asChild>
+                      <Link href="/pricing">Suscribirse ahora ($9.99)</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Proyecto</label>
+                    <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un proyecto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {fields.map((field) => (
+                  <div key={field.name} className="space-y-2">
+                    <label className="text-sm font-medium">{field.label}</label>
+                    {field.type === 'textarea' ? (
+                      <textarea
+                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder={field.placeholder}
+                        value={formData[field.name]}
+                        onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+                        required
+                      />
+                    ) : field.type === 'select' ? (
+                      <Select 
+                        value={formData[field.name]} 
+                        onValueChange={(val) => setFormData({ ...formData, [field.name]: val })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={field.placeholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options?.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <input
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder={field.placeholder}
+                        value={formData[field.name]}
+                        onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+                        required
+                      />
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+              <CardFooter className="flex-col gap-2 items-stretch">
+                <Button type="submit" className="w-full" disabled={generating || !user || isLimitReached || (user && !selectedProjectId) as boolean}>
+                  {generating ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generando...</>
+                  ) : (
+                    <><Sparkles className="mr-2 h-4 w-4" /> Generar con IA</>
+                  )}
+                </Button>
+                {!isPremium && user && !isLimitReached && (
+                  <p className="text-xs text-center text-muted-foreground w-full">
+                    Te quedan <span className="font-bold text-foreground">{freeUsesLeft} usos gratuitos</span> por hoy.
+                  </p>
+                )}
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <h3 className="text-xl font-bold">Resultados</h3>
+          {!result && !generating ? (
+            <div className="flex flex-col items-center justify-center h-[400px] border border-dashed rounded-xl bg-muted/20 text-muted-foreground">
+              <Sparkles className="h-12 w-12 mb-4 opacity-20" />
+              <p>Completa el formulario para generar contenido.</p>
+            </div>
+          ) : generating ? (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader>
+                <CardContent className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/6" />
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Display Result Logic based on toolSlug */}
+              {toolSlug === 'business-idea' && result.ideas?.map((idea: any, i: number) => (
+                <ResultCard 
+                  key={i} 
+                  title={idea.title} 
+                  content={idea.summary} 
+                  metadata={[
+                    { label: 'Monetización', value: idea.monetizationModel },
+                    { label: 'Primer Paso', value: idea.firstStep }
+                  ]} 
+                  onCopy={() => copyToClipboard(JSON.stringify(idea, null, 2))}
+                  onFavorite={() => saveAsFavorite(idea, `idea-${i}`)}
+                  isFavorited={favoritedItems.has(`idea-${i}`)}
+                  onSave={() => saveAsDocument(idea.title, idea.summary)}
+                />
+              ))}
+              
+              {toolSlug === 'customer-avatar' && result && (
+                <ResultCard 
+                  title={result.avatarName} 
+                  content={result.goals} 
+                  metadata={[
+                    { label: 'Demografía', value: result.demographics },
+                    { label: 'Frustraciones', value: result.frustrations },
+                    { label: 'Deseos', value: result.desires }
+                  ]} 
+                  onCopy={() => copyToClipboard(JSON.stringify(result, null, 2))}
+                  onFavorite={() => saveAsFavorite(result, 'avatar')}
+                  isFavorited={favoritedItems.has('avatar')}
+                  onSave={() => saveAsDocument(result.avatarName, result.goals)}
+                />
+              )}
+
+              {toolSlug === 'product-description' && result && (
+                <div className="space-y-4">
+                  <ResultCard 
+                    title="Descripción Corta" 
+                    content={result.shortDescription} 
+                    onCopy={() => copyToClipboard(result.shortDescription)} 
+                    onFavorite={() => saveAsFavorite({ description: result.shortDescription }, 'desc-short')}
+                    isFavorited={favoritedItems.has('desc-short')}
+                    onSave={() => saveAsDocument(`${result.productName} - Short`, result.shortDescription)}
+                  />
+                  <ResultCard 
+                    title="Descripción Larga" 
+                    content={result.longDescription} 
+                    onCopy={() => copyToClipboard(result.longDescription)} 
+                    onFavorite={() => saveAsFavorite({ description: result.longDescription }, 'desc-long')}
+                    isFavorited={favoritedItems.has('desc-long')}
+                    onSave={() => saveAsDocument(`${result.productName} - Long`, result.longDescription)}
+                  />
+                  <ResultCard 
+                    title="Beneficios" 
+                    content={result.primaryBenefits?.join(', ')} 
+                    onCopy={() => copyToClipboard(result.primaryBenefits?.join('\n'))} 
+                    onFavorite={() => saveAsFavorite({ benefits: result.primaryBenefits }, 'desc-benefits')}
+                    isFavorited={favoritedItems.has('desc-benefits')}
+                    onSave={() => saveAsDocument(`${result.productName} - Benefits`, result.primaryBenefits?.join('\n'))}
+                  />
+                </div>
+              )}
+
+              {toolSlug === 'pain-points' && result.painPoints?.map((pp: any, i: number) => (
+                <ResultCard 
+                  key={i} 
+                  title={pp.painPoint} 
+                  content={pp.emotionalImpact} 
+                  metadata={[
+                    { label: 'Impacto Práctico', value: pp.practicalImpact },
+                    { label: 'Ángulo de Venta', value: pp.messagingAngle }
+                  ]} 
+                  onCopy={() => copyToClipboard(JSON.stringify(pp, null, 2))}
+                  onFavorite={() => saveAsFavorite(pp, `pp-${i}`)}
+                  isFavorited={favoritedItems.has(`pp-${i}`)}
+                  onSave={() => saveAsDocument(pp.painPoint, pp.emotionalImpact)}
+                />
+              ))}
+
+              {toolSlug === 'naming-slogan' && result.options?.map((opt: any, i: number) => (
+                <ResultCard 
+                  key={i} 
+                  title={opt.brandName} 
+                  content={opt.slogan} 
+                  metadata={[
+                    { label: 'Razón', value: opt.rationale }
+                  ]} 
+                  onCopy={() => copyToClipboard(`${opt.brandName}: ${opt.slogan}`)}
+                  onFavorite={() => saveAsFavorite(opt, `opt-${i}`)}
+                  isFavorited={favoritedItems.has(`opt-${i}`)}
+                  onSave={() => saveAsDocument(opt.brandName, opt.slogan)}
+                />
+              ))}
+
+              {toolSlug === 'ads-generator' && (
+                <div className="space-y-4">
+                  {result.headlines?.map((h: string, i: number) => (
+                    <ResultCard 
+                      key={i} 
+                      title={`Titular ${i+1}`} 
+                      content={h} 
+                      onCopy={() => copyToClipboard(h)} 
+                      onFavorite={() => saveAsFavorite({ headline: h }, `headline-${i}`)}
+                      isFavorited={favoritedItems.has(`headline-${i}`)}
+                      onSave={() => saveAsDocument(`Ad Headline ${i+1}`, h)}
+                    />
+                  ))}
+                  {result.bodyVariants?.map((b: string, i: number) => (
+                    <ResultCard 
+                      key={i} 
+                      title={`Cuerpo ${i+1}`} 
+                      content={b} 
+                      onCopy={() => copyToClipboard(b)} 
+                      onFavorite={() => saveAsFavorite({ body: b }, `body-${i}`)}
+                      isFavorited={favoritedItems.has(`body-${i}`)}
+                      onSave={() => saveAsDocument(`Ad Body ${i+1}`, b)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {toolSlug === 'seo-brief' && (
+                <div className="space-y-4">
+                  <ResultCard 
+                    title="Resumen e Intención" 
+                    content={result.intentSummary} 
+                    metadata={[
+                      { label: 'Títulos sugeridos', value: result.seoTitles?.join(' | ') },
+                      { label: 'Keywords Secundarias', value: result.secondaryKeywords || 'N/A' }
+                    ]} 
+                    onCopy={() => copyToClipboard(JSON.stringify({ intentSummary: result.intentSummary, seoTitles: result.seoTitles }, null, 2))}
+                    onFavorite={() => saveAsFavorite({ intentSummary: result.intentSummary, seoTitles: result.seoTitles }, 'seo-brief-summary')}
+                    isFavorited={favoritedItems.has('seo-brief-summary')}
+                    onSave={() => saveAsDocument('Resumen SEO', result.intentSummary)}
+                  />
+                  
+                  {result.metaDescriptions?.length > 0 && (
+                    <ResultCard 
+                      title="Meta Descripciones" 
+                      content={result.metaDescriptions.map((desc: string, i: number) => `${i + 1}. ${desc}`).join('\n\n')} 
+                      onCopy={() => copyToClipboard(result.metaDescriptions.map((desc: string, i: number) => `${i + 1}. ${desc}`).join('\n'))}
+                      onFavorite={() => saveAsFavorite({ metaDescriptions: result.metaDescriptions }, 'seo-brief-meta')}
+                      isFavorited={favoritedItems.has('seo-brief-meta')}
+                      onSave={() => saveAsDocument('Meta Descripciones', result.metaDescriptions.map((desc: string, i: number) => `${i + 1}. ${desc}`).join('\n'))}
+                    />
+                  )}
+
+                  {result.outline?.length > 0 && (
+                    <ResultCard 
+                      title="Estructura Sugerida (Outline)" 
+                      content={result.outline.join('\n')} 
+                      onCopy={() => copyToClipboard(result.outline.join('\n'))}
+                      onFavorite={() => saveAsFavorite({ outline: result.outline }, 'seo-brief-outline')}
+                      isFavorited={favoritedItems.has('seo-brief-outline')}
+                      onSave={() => saveAsDocument('Estructura SEO', result.outline.join('\n'))}
+                    />
+                  )}
+
+                  {(result.relatedQuestions?.length > 0 || result.internalLinkIdeas?.length > 0) && (
+                    <ResultCard 
+                      title="Preguntas y Enlaces" 
+                      content={[
+                        ...(result.relatedQuestions ? ['PREGUNTAS FRECUENTES (FAQS):', ...result.relatedQuestions, ''] : []),
+                        ...(result.internalLinkIdeas ? ['IDEAS DE ENLACES INTERNOS:', ...result.internalLinkIdeas] : [])
+                      ].join('\n')} 
+                      onCopy={() => copyToClipboard([
+                        ...(result.relatedQuestions ? ['PREGUNTAS FRECUENTES (FAQS):', ...result.relatedQuestions, ''] : []),
+                        ...(result.internalLinkIdeas ? ['IDEAS DE ENLACES INTERNOS:', ...result.internalLinkIdeas] : [])
+                      ].join('\n'))}
+                      onFavorite={() => saveAsFavorite({ relatedQuestions: result.relatedQuestions, internalLinkIdeas: result.internalLinkIdeas }, 'seo-brief-links')}
+                      isFavorited={favoritedItems.has('seo-brief-links')}
+                      onSave={() => saveAsDocument('FAQS y Enlaces Internos', [
+                        ...(result.relatedQuestions ? ['PREGUNTAS FRECUENTES (FAQS):', ...result.relatedQuestions, ''] : []),
+                        ...(result.internalLinkIdeas ? ['IDEAS DE ENLACES INTERNOS:', ...result.internalLinkIdeas] : [])
+                      ].join('\n'))}
+                    />
+                  )}
+                </div>
+              )}
+
+              {toolSlug === 'blog-toolkit' && (
+                <div className="space-y-4">
+                  <ResultCard 
+                    title={result.titles?.[0]} 
+                    content={result.intro} 
+                    onCopy={() => copyToClipboard(result.intro)} 
+                    onFavorite={() => saveAsFavorite({ intro: result.intro, titles: result.titles }, 'blog-intro')}
+                    isFavorited={favoritedItems.has('blog-intro')}
+                    onSave={() => saveAsDocument(result.titles?.[0], result.intro)}
+                  />
+                  <ResultCard 
+                    title="Borrador Completo" 
+                    content={result.fullDraft} 
+                    onCopy={() => copyToClipboard(result.fullDraft)} 
+                    onFavorite={() => saveAsFavorite({ draft: result.fullDraft }, 'blog-draft')}
+                    isFavorited={favoritedItems.has('blog-draft')}
+                    onSave={() => saveAsDocument(`${result.titles?.[0]} (Draft)`, result.fullDraft)}
+                  />
+                </div>
+              )}
+
+              {toolSlug === 'cta-generator' && (
+                <div className="space-y-4">
+                  {result.directCtas?.map((c: string, i: number) => (
+                    <ResultCard 
+                      key={`direct-${i}`} 
+                      title="CTA Directo" 
+                      content={c} 
+                      onCopy={() => copyToClipboard(c)} 
+                      onFavorite={() => saveAsFavorite({ cta: c }, `cta-direct-${i}`)}
+                      isFavorited={favoritedItems.has(`cta-direct-${i}`)}
+                      onSave={() => saveAsDocument('CTA Directo', c)}
+                    />
+                  ))}
+                  {result.softCtas?.map((c: string, i: number) => (
+                    <ResultCard 
+                      key={`soft-${i}`} 
+                      title="CTA Suave" 
+                      content={c} 
+                      onCopy={() => copyToClipboard(c)} 
+                      onFavorite={() => saveAsFavorite({ cta: c }, `cta-soft-${i}`)}
+                      isFavorited={favoritedItems.has(`cta-soft-${i}`)}
+                      onSave={() => saveAsDocument('CTA Suave', c)}
+                    />
+                  ))}
+                  {result.emotionalCtas?.map((c: string, i: number) => (
+                    <ResultCard 
+                      key={`emotional-${i}`} 
+                      title="CTA Emocional" 
+                      content={c} 
+                      onCopy={() => copyToClipboard(c)} 
+                      onFavorite={() => saveAsFavorite({ cta: c }, `cta-emotional-${i}`)}
+                      isFavorited={favoritedItems.has(`cta-emotional-${i}`)}
+                      onSave={() => saveAsDocument('CTA Emocional', c)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function ResultCard({ 
+  title, 
+  content, 
+  metadata, 
+  onCopy, 
+  onFavorite, 
+  isFavorited,
+  onSave 
+}: { 
+  title: string, 
+  content: string, 
+  metadata?: any[], 
+  onCopy: () => void,
+  onFavorite?: () => void,
+  isFavorited?: boolean,
+  onSave?: () => void
+}) {
+  return (
+    <Card className="shadow-sm border-none bg-card">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg font-bold">{title}</CardTitle>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={onCopy} title="Copiar"><Copy className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onFavorite} title="Favorito">
+            <Star className={`h-4 w-4 ${isFavorited ? 'fill-primary text-primary' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onSave} title="Guardar en proyecto"><Plus className="h-4 w-4" /></Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-foreground leading-relaxed">{content}</p>
+        {metadata && (
+          <div className="grid gap-2 border-t pt-4">
+            {metadata.map((m, j) => (
+              <div key={j} className="text-xs">
+                <span className="font-bold text-muted-foreground uppercase mr-2">{m.label}:</span>
+                <span className="text-foreground">{m.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
