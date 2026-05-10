@@ -68,61 +68,87 @@ export default function SettingsPage() {
 
   return (
     <Shell>
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Configuración</h2>
-          <p className="text-muted-foreground">Gestiona tu perfil y preferencias.</p>
+      <div className="space-y-12">
+        <div className="flex flex-col gap-3">
+          <h2 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Configuración
+          </h2>
+          <p className="text-lg text-muted-foreground/80 max-w-2xl leading-relaxed">
+            Personaliza tu experiencia y gestiona tu suscripción premium.
+          </p>
         </div>
 
-        <Card className="max-w-xl border-none shadow-sm bg-card/50">
-          <CardHeader>
-            <CardTitle>Perfil de Usuario</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Nombre</p>
-              <p className="text-sm">{user?.displayName || 'No configurado'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Email</p>
-              <p className="text-sm">{user?.email}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Plan</p>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-bold ${isPremium ? 'bg-emerald-500/20 text-emerald-600' : 'bg-primary/20 text-primary'}`}>
-                  {isPremium ? 'PLAN PREMIUM' : 'PLAN GRATUITO'}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* User Info & Subscription */}
+          <div className="lg:col-span-7 space-y-8">
+            <Card className="overflow-hidden border-white/5 bg-white/5 shadow-2xl shadow-primary/5">
+              <CardHeader className="p-8 pb-4">
+                <CardTitle className="text-2xl font-bold">Perfil de Usuario</CardTitle>
+              </CardHeader>
+              <CardContent className="p-8 pt-4 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Nombre Completo</label>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-lg font-medium">
+                      {user?.displayName || 'Invitado'}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Correo Electrónico</label>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-lg font-medium truncate">
+                      {user?.email}
+                    </div>
+                  </div>
                 </div>
-                {isPremium ? (
-                  <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={isManaging}>
-                    {isManaging ? 'Cargando portal...' : 'Gestionar Suscripción'}
-                  </Button>
-                ) : (
-                  <Button variant="default" size="sm" onClick={() => router.push('/pricing')}>
-                    Subir a Premium
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="max-w-xl border-red-500/20 shadow-sm bg-destructive/5 mt-8">
-          <CardHeader>
-            <CardTitle className="text-destructive font-bold">Eliminar Cuenta</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-foreground/80">
-              Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate de todo antes de pulsar el botón.
-            </p>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteAccount}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Eliminando...' : 'Eliminar mi cuenta'}
-            </Button>
-          </CardContent>
-        </Card>
+
+                <div className="pt-6 border-t border-white/5">
+                  <label className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-4 block">Estado de la Suscripción</label>
+                  <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-3xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+                    <div className={`flex items-center gap-3 px-4 py-2 rounded-full text-xs font-black tracking-widest ${isPremium ? 'bg-emerald-500/20 text-emerald-500' : 'bg-primary/20 text-primary'}`}>
+                      {isPremium ? 'ACTIVA - PREMIUM' : 'CUENTA GRATUITA'}
+                    </div>
+                    <div className="flex-1 text-sm text-muted-foreground">
+                      {isPremium 
+                        ? 'Tienes acceso ilimitado a todos los agentes y herramientas de marketing.' 
+                        : 'Actualiza a Premium para desbloquear el generador de blogs y análisis SEO avanzado.'}
+                    </div>
+                    {isPremium ? (
+                      <Button variant="outline" className="rounded-2xl border-white/10 hover:bg-white/5" onClick={handleManageSubscription} disabled={isManaging}>
+                        {isManaging ? 'Cargando...' : 'Gestionar Pagos'}
+                      </Button>
+                    ) : (
+                      <Button className="rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => router.push('/pricing')}>
+                        Mejorar Plan
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Dangerous Zone */}
+          <div className="lg:col-span-5">
+            <Card className="overflow-hidden border-destructive/10 bg-destructive/5 shadow-2xl shadow-destructive/5">
+              <CardHeader className="p-8 pb-4">
+                <CardTitle className="text-2xl font-bold text-destructive">Zona de Peligro</CardTitle>
+              </CardHeader>
+              <CardContent className="p-8 pt-4 space-y-6">
+                <p className="text-base text-muted-foreground leading-relaxed">
+                  Al eliminar tu cuenta se borrarán permanentemente todos tus proyectos, borradores y configuraciones. Esta acción no se puede deshacer.
+                </p>
+                <Button 
+                  variant="destructive" 
+                  className="w-full h-14 rounded-2xl font-bold text-lg"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Procesando...' : 'Eliminar Cuenta Definitivamente'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </Shell>
   );

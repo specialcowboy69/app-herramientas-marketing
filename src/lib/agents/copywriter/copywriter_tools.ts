@@ -24,27 +24,43 @@ export class CopywriterAgent {
   }
 
   /**
+   * Procesa el objeto de conocimiento de IA para convertirlo en strings legibles por el prompt
+   */
+  private static stringifyKnowledge(context: any): { customerAvatar: string, painPoints: string } {
+    const knowledge = context.aiKnowledge || {};
+    
+    const stringify = (val: any) => {
+      if (!val) return '';
+      return typeof val === 'string' ? val : JSON.stringify(val, null, 2);
+    };
+
+    return {
+      customerAvatar: stringify(knowledge.lastAvatar),
+      painPoints: stringify(knowledge.painPoints)
+    };
+  }
+
+  /**
    * Prepara el prompt completo para el generador de anuncios
    */
   static async prepareAdsPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
-    // 1. Obtener Persona (System Prompt)
     const system = await this.getFileContent('copywriter_persona.md');
+    const { customerAvatar, painPoints } = this.stringifyKnowledge(context);
 
-    // 2. Preparar variables para la Skill
     const variables = {
       platform: input.platform || 'N/A',
-      productOrService: input.productOrService || 'N/A',
-      targetAudience: input.targetAudience || 'N/A',
+      productOrService: input.productOrService || context.productName || 'N/A',
+      targetAudience: input.targetAudience || context.targetAudience || 'N/A',
       offer: input.offer || 'N/A',
       mainProblem: input.mainProblem || 'N/A',
       cta: input.cta || 'N/A',
       tone: input.tone || context.brandTone || 'persuasivo',
-      language: context.language || 'es'
+      language: context.language || 'es',
+      customerAvatar: customerAvatar || 'No proporcionado',
+      painPoints: painPoints || 'No proporcionado'
     };
 
-    // 3. Obtener Skill (User Prompt) con variables interpoladas
     const user = await this.getFileContent('ads_skill.md', variables);
-
     return { system, user };
   }
 
@@ -53,12 +69,16 @@ export class CopywriterAgent {
    */
   static async prepareCTAPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
     const system = await this.getFileContent('copywriter_persona.md');
+    const { customerAvatar, painPoints } = this.stringifyKnowledge(context);
+
     const variables = {
       goal: input.goal || 'N/A',
       tone: input.tone || context.brandTone || 'persuasivo',
       channel: input.channel || 'N/A',
       urgencyLevel: input.urgencyLevel || 'N/A',
-      language: context.language || 'es'
+      language: context.language || 'es',
+      customerAvatar: customerAvatar || 'No proporcionado',
+      painPoints: painPoints || 'No proporcionado'
     };
     const user = await this.getFileContent('cta_skill.md', variables);
     return { system, user };
@@ -85,14 +105,18 @@ export class CopywriterAgent {
    */
   static async prepareProductDescriptionPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
     const system = await this.getFileContent('copywriter_persona.md');
+    const { customerAvatar, painPoints } = this.stringifyKnowledge(context);
+
     const variables = {
-      productName: input.productName || 'N/A',
+      productName: input.productName || context.productName || 'N/A',
       category: input.category || 'N/A',
       features: input.features || 'N/A',
       benefits: input.benefits || 'N/A',
-      targetAudience: input.targetAudience || 'N/A',
+      targetAudience: input.targetAudience || context.targetAudience || 'N/A',
       tone: input.tone || context.brandTone || 'profesional',
-      language: context.language || 'es'
+      language: context.language || 'es',
+      customerAvatar: customerAvatar || 'No proporcionado',
+      painPoints: painPoints || 'No proporcionado'
     };
     const user = await this.getFileContent('product_description_skill.md', variables);
     return { system, user };

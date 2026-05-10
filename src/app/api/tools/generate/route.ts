@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId, toolSlug } = body;
+    const { projectId, productId, toolSlug } = body;
     // Sanitize all user-provided input fields before they reach the AI prompt
     const input = sanitizeInputObject(body.input ?? {});
 
@@ -61,14 +61,35 @@ export async function POST(req: NextRequest) {
     }
 
     let projectContext = null;
+    let isolatedContext = null;
 
     if (userId && projectId && projectId !== 'anonymous') {
       // Validate project ownership
       const projectDoc = await adminDb.collection('projects').doc(projectId).get();
-      if (!projectDoc.exists || projectDoc.data()?.userId !== userId) {
+      const projectData = projectDoc.data();
+      
+      if (!projectDoc.exists || projectData?.userId !== userId) {
         return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
       }
-      projectContext = projectDoc.data();
+      
+      projectContext = projectData;
+
+      // Logic for Isolated Context (Products)
+      if (productId && projectData.products?.[productId]) {
+        const product = projectData.products[productId];
+        isolatedContext = {
+          ...projectData,
+          // Product-specific overrides
+          productName: product.name,
+          productUsp: product.usp,
+          // Use product audience if available, else fallback to project audience
+          targetAudience: product.targetAudience || projectData.targetAudience,
+          aiKnowledge: product.aiKnowledge || {},
+          isProductSpecific: true
+        };
+      } else {
+        isolatedContext = projectData;
+      }
     }
 
     let output;
@@ -78,43 +99,49 @@ export async function POST(req: NextRequest) {
       const { CopywriterAgent } = await import('@/lib/agents/copywriter/copywriter_tools');
       let system, user;
       
+      const context = isolatedContext || {};
+      
       if (toolSlug === 'ads-generator') {
-        ({ system, user } = await CopywriterAgent.prepareAdsPrompt(input, projectContext || {}));
+        ({ system, user } = await CopywriterAgent.prepareAdsPrompt(input, context));
       } else if (toolSlug === 'cta-generator') {
-        ({ system, user } = await CopywriterAgent.prepareCTAPrompt(input, projectContext || {}));
+        ({ system, user } = await CopywriterAgent.prepareCTAPrompt(input, context));
       } else if (toolSlug === 'naming-slogan') {
-        ({ system, user } = await CopywriterAgent.prepareNamingPrompt(input, projectContext || {}));
+        ({ system, user } = await CopywriterAgent.prepareNamingPrompt(input, context));
       } else {
-        ({ system, user } = await CopywriterAgent.prepareProductDescriptionPrompt(input, projectContext || {}));
+        ({ system, user } = await CopywriterAgent.prepareProductDescriptionPrompt(input, context));
       }
       
-      output = await generateJSON(user, "gemini-2.5-flash", system);
+      output = await generateJSON(user, undefined, system);
     } else if (toolSlug === 'seo-brief' || toolSlug === 'blog-toolkit') {
       // AGENTE: SEO Specialist
       const { SEOSpecialistAgent } = await import('@/lib/agents/seo_specialist/seo_tools');
       let system, user;
       
+      const context = isolatedContext || {};
+      
       if (toolSlug === 'seo-brief') {
-        ({ system, user } = await SEOSpecialistAgent.prepareSEOBriefPrompt(input, projectContext || {}));
+        ({ system, user } = await SEOSpecialistAgent.prepareSEOBriefPrompt(input, context));
       } else {
-        ({ system, user } = await SEOSpecialistAgent.prepareBlogToolkitPrompt(input, projectContext || {}));
+        ({ system, user } = await SEOSpecialistAgent.prepareBlogToolkitPrompt(input, context));
       }
       
-      output = await generateJSON(user, "gemini-2.5-flash", system);
+      output = await generateJSON(user, undefined, system);
     } else if (toolSlug === 'business-idea' || toolSlug === 'customer-avatar' || toolSlug === 'pain-points') {
       // AGENTE: Business Strategist
       const { BusinessStrategistAgent } = await import('@/lib/agents/business_strategist/strategist_tools');
       let system, user;
       
+      const context = isolatedContext || {};
+      
       if (toolSlug === 'business-idea') {
-        ({ system, user } = await BusinessStrategistAgent.prepareBusinessIdeaPrompt(input, projectContext || {}));
+        ({ system, user } = await BusinessStrategistAgent.prepareBusinessIdeaPrompt(input, context));
       } else if (toolSlug === 'customer-avatar') {
-        ({ system, user } = await BusinessStrategistAgent.prepareCustomerAvatarPrompt(input, projectContext || {}));
+        ({ system, user } = await BusinessStrategistAgent.prepareCustomerAvatarPrompt(input, context));
       } else {
-        ({ system, user } = await BusinessStrategistAgent.preparePainPointsPrompt(input, projectContext || {}));
+        ({ system, user } = await BusinessStrategistAgent.preparePainPointsPrompt(input, context));
       }
       
-      output = await generateJSON(user, "gemini-2.5-flash", system);
+      output = await generateJSON(user, undefined, system);
     } else {
       return NextResponse.json({ error: 'Invalid tool slug' }, { status: 400 });
     }
@@ -143,6 +170,25 @@ export async function POST(req: NextRequest) {
           lastGenerationDate: userData.lastGenerationDate
         });
       }
+
+      // NEW: Update AI Knowledge in the specific product if productId is present
+      if (productId) {
+        let updateField = '';
+        if (toolSlug === 'customer-avatar') updateField = `products.${productId}.aiKnowledge.lastAvatar`;
+        else if (toolSlug === 'pain-points') updateField = `products.${productId}.aiKnowledge.painPoints`;
+        else if (toolSlug === 'business-idea') updateField = `products.${productId}.aiKnowledge.businessModel`;
+
+        if (updateField) {
+          try {
+            await adminDb.collection('projects').doc(projectId).update({
+              [updateField]: output
+            });
+            console.log(`Updated aiKnowledge for product ${productId} in project ${projectId}`);
+          } catch (err) {
+            console.error('Error updating product aiKnowledge:', err);
+          }
+        }
+      }
     }
 
     return NextResponse.json({
@@ -151,7 +197,7 @@ export async function POST(req: NextRequest) {
       output,
     });
   } catch (error: any) {
-    console.error('API Error:', error);
+    console.error('[ERROR GEMINI DETALLADO]:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

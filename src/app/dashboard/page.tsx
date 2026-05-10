@@ -51,89 +51,92 @@ export default function DashboardPage() {
 
   return (
     <Shell>
-      <div className="space-y-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-bold tracking-tight">Bienvenido, {user?.displayName || 'Emprendedor'}</h2>
-          <p className="text-muted-foreground">Aquí tienes un resumen de tu actividad y progreso.</p>
+      <div className="space-y-12">
+        <div className="flex flex-col gap-3">
+          <h2 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Bienvenido, {user?.displayName?.split(' ')[0] || 'Emprendedor'} ✨
+          </h2>
+          <p className="text-lg text-muted-foreground/80 max-w-2xl">
+            Tu centro de mando para la creación de contenido inteligente.
+          </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="bg-primary/5 border-none shadow-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Proyectos Activos</CardTitle>
-              <Rocket className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.projectsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">Estrategias en marcha</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-primary/5 border-none shadow-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Documentos</CardTitle>
-              <FileText className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.documentsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">Borradores guardados</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-primary/5 border-none shadow-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Generaciones IA</CardTitle>
-              <Wand2 className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.generationsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">Ideas y copy generados</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-none shadow-sm bg-card/50">
-            <CardHeader>
-              <CardTitle>Acciones Rápidas</CardTitle>
-              <CardDescription>Comienza a crear contenido ahora mismo.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              <Link href="/projects">
-                <Button className="w-full justify-between" variant="outline">
-                  <div className="flex items-center">
-                    <Plus className="mr-2 h-4 w-4" /> Nuevo Proyecto
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { label: 'Proyectos Activos', value: stats.projectsCount, icon: Rocket, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+            { label: 'Documentos', value: stats.documentsCount, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+            { label: 'Generaciones IA', value: stats.generationsCount, icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          ].map((stat, i) => (
+            <Card key={i} className="relative overflow-hidden border-white/5 bg-white/5 shadow-2xl shadow-primary/5">
+              <CardContent className="p-8">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                    <div className="text-4xl font-black">{stat.value}</div>
                   </div>
-                  <ArrowRight className="h-4 w-4 opacity-50" />
-                </Button>
+                  <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color} shadow-inner`}>
+                    <stat.icon size={28} strokeWidth={1.5} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Actions - Bento Large */}
+          <Card className="lg:col-span-8 overflow-hidden border-white/5 bg-white/5 shadow-2xl shadow-primary/5">
+            <CardHeader className="p-8 pb-4">
+              <CardTitle className="text-2xl font-bold">Acciones Rápidas</CardTitle>
+              <CardDescription className="text-base text-muted-foreground/70">Lanza tu próxima campaña en segundos.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Link href="/projects" className="group">
+                <div className="h-full p-6 rounded-3xl border border-white/5 bg-white/5 hover:bg-primary/10 transition-all duration-300 group-hover:-translate-y-1">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Plus size={24} />
+                  </div>
+                  <h4 className="text-lg font-bold mb-2">Nuevo Proyecto</h4>
+                  <p className="text-sm text-muted-foreground/70">Inicia una nueva estrategia de contenido desde cero.</p>
+                </div>
               </Link>
-              <Link href="/tools">
-                <Button className="w-full justify-between" variant="secondary">
-                  <div className="flex items-center">
-                    <Sparkles className="mr-2 h-4 w-4" /> Explorar Herramientas
+              <Link href="/tools" className="group">
+                <div className="h-full p-6 rounded-3xl border border-white/5 bg-white/5 hover:bg-secondary/10 transition-all duration-300 group-hover:-translate-y-1">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/20 text-secondary-foreground flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Wand2 size={24} />
                   </div>
-                  <ArrowRight className="h-4 w-4 opacity-50" />
-                </Button>
+                  <h4 className="text-lg font-bold mb-2">Explorar Herramientas</h4>
+                  <p className="text-sm text-muted-foreground/70">Usa nuestros agentes de IA para tareas específicas.</p>
+                </div>
               </Link>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-card/50">
-            <CardHeader>
-              <CardTitle>Próximos Pasos</CardTitle>
-              <CardDescription>Sugerencias basadas en tu progreso.</CardDescription>
+          {/* Tips - Bento Small */}
+          <Card className="lg:col-span-4 overflow-hidden border-white/5 bg-white/5 shadow-2xl shadow-primary/5">
+            <CardHeader className="p-8 pb-4">
+              <CardTitle className="text-2xl font-bold text-amber-500 flex items-center gap-2">
+                <Star size={20} fill="currentColor" /> Pro-Tips
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                <TrendingUp className="h-5 w-5 text-primary mt-0.5" />
+            <CardContent className="p-8 pt-4 space-y-6">
+              <div className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-5 w-5 text-blue-500" />
+                </div>
                 <div>
-                  <div className="text-sm font-bold">Define tu Customer Avatar</div>
-                  <p className="text-xs text-muted-foreground">Tener un perfil claro ayuda a que la IA genere mejor copy.</p>
+                  <p className="text-sm font-bold">Define tu Avatar</p>
+                  <p className="text-xs text-muted-foreground mt-1">Mejora la precisión de la IA un 40%.</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                <Clock className="h-5 w-5 text-primary mt-0.5" />
+              <div className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 text-emerald-500" />
+                </div>
                 <div>
-                  <div className="text-sm font-bold">Completa tu SEO Brief</div>
-                  <p className="text-xs text-muted-foreground">Optimiza tu estrategia de búsqueda hoy.</p>
+                  <p className="text-sm font-bold">SEO Briefs</p>
+                  <p className="text-xs text-muted-foreground mt-1">No olvides estructurar tus artículos.</p>
                 </div>
               </div>
             </CardContent>

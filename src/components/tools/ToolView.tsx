@@ -11,9 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { auth } from '@/lib/firebase/client';
-import { Loader2, Sparkles, Copy, Star, Plus } from 'lucide-react';
+import { Loader2, Sparkles, Copy, Star, Plus, ArrowRight, Zap, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ToolViewProps {
   title: string;
@@ -32,14 +35,31 @@ interface ToolViewProps {
 export function ToolView({ title, description, toolSlug, fields, initialValues }: ToolViewProps) {
   const { user, userData } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(searchParams.get('projectId') || '');
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [formData, setFormData] = useState(initialValues);
   const [result, setResult] = useState<any>(null);
   const [lastGenerationId, setLastGenerationId] = useState<string | null>(null);
   const [favoritedItems, setFavoritedItems] = useState<Set<string>>(new Set());
+
+  // Tool Chaining: Pre-fill context if exists in URL
+  useEffect(() => {
+    const context = searchParams.get('inheritedContext');
+    if (context) {
+      // Find the first textarea or the field that is likely the main input
+      const mainField = fields.find(f => f.type === 'textarea') || fields[0];
+      if (mainField) {
+        setFormData(prev => ({
+          ...prev,
+          [mainField.name]: context
+        }));
+      }
+    }
+  }, [searchParams, fields]);
 
   const isPremium = userData?.subscriptionStatus === 'active';
   const today = new Date().toISOString().split('T')[0];
@@ -61,6 +81,14 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
       });
     }
   }, [user]);
+
+  // Reset selected product when project changes
+  useEffect(() => {
+    setSelectedProductId('');
+  }, [selectedProjectId]);
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const hasProducts = selectedProject?.products && Object.keys(selectedProject.products).length > 0;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +117,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
         headers,
         body: JSON.stringify({
           projectId: user && selectedProjectId ? selectedProjectId : 'anonymous',
+          productId: selectedProductId,
           toolSlug,
           input: formData,
         }),
@@ -208,6 +237,27 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                   </div>
                 )}
 
+                {user && hasProducts && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Package className="h-3 w-3 text-primary" /> Producto/Servicio a trabajar
+                    </label>
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                      <SelectTrigger className="border-primary/20 bg-primary/5">
+                        <SelectValue placeholder="Selecciona el producto específico" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.values(selectedProject.products || {}).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Esto aislará el contexto para que la IA se enfoque solo en este producto.
+                    </p>
+                  </div>
+                )}
+
                 {fields.map((field) => (
                   <div key={field.name} className="space-y-2">
                     <label className="text-sm font-medium">{field.label}</label>
@@ -261,6 +311,88 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
               </CardFooter>
             </form>
           </Card>
+          
+          {/* Tool Chaining: Next Steps Section (Moved to configuration column) */}
+          {result && !generating && (
+            <div className="p-8 rounded-3xl bg-primary/5 border border-primary/20 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold">Siguientes Pasos Sugeridos</h4>
+                  <p className="text-sm text-muted-foreground">Potencia tus resultados usando esta información en otras herramientas.</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {toolSlug === 'business-idea' && result.ideas?.[0] && (
+                  <Button 
+                    onClick={() => {
+                      const context = `Idea: ${result.ideas[0].title}. Resumen: ${result.ideas[0].summary}`;
+                      router.push(`/tools/customer-avatar?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
+                    }}
+                    className="rounded-xl h-11 px-6 group"
+                  >
+                    Crear Avatar de Cliente <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                )}
+
+                {toolSlug === 'customer-avatar' && result && (
+                  <Button 
+                    onClick={() => {
+                      const context = `Avatar: ${result.avatarName}. Deseos: ${result.desires}. Frustraciones: ${result.frustrations}`;
+                      router.push(`/tools/pain-points?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
+                    }}
+                    className="rounded-xl h-11 px-6 group"
+                  >
+                    Descubrir Puntos de Dolor <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                )}
+
+                {toolSlug === 'pain-points' && result.painPoints && (
+                  <>
+                    <Button 
+                      onClick={() => {
+                        const context = `Puntos de dolor identificados: ${result.painPoints.map((p: any) => p.painPoint).join(', ')}`;
+                        router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
+                      }}
+                      className="rounded-xl h-11 px-6 group"
+                    >
+                      Redactar Anuncios <Zap className="ml-2 h-4 w-4 text-yellow-400" />
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        const context = `Resolver estos problemas: ${result.painPoints.map((p: any) => p.painPoint).join(', ')}`;
+                        router.push(`/tools/product-description?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
+                      }}
+                      className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5"
+                    >
+                      Crear Descripción de Producto <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </>
+                )}
+
+                {toolSlug === 'seo-brief' && result && (
+                  <Button 
+                    onClick={() => {
+                      const context = `Brief SEO: ${result.intentSummary}. Estructura: ${result.outline?.join(', ')}`;
+                      router.push(`/tools/blog-toolkit?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
+                    }}
+                    className="rounded-xl h-11 px-6 group"
+                  >
+                    Redactar Artículo de Blog <Sparkles className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+
+                {/* Default back button if no specific chain is defined */}
+                <Button variant="ghost" onClick={() => router.push('/tools')} className="rounded-xl h-11">
+                  Ver todas las herramientas
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -475,6 +607,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                   <ResultCard 
                     title="Borrador Completo" 
                     content={result.fullDraft} 
+                    isMarkdown={true}
                     onCopy={() => copyToClipboard(result.fullDraft)} 
                     onFavorite={() => saveAsFavorite({ draft: result.fullDraft }, 'blog-draft')}
                     isFavorited={favoritedItems.has('blog-draft')}
@@ -520,6 +653,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                   ))}
                 </div>
               )}
+
             </div>
           )}
         </div>
@@ -535,7 +669,8 @@ function ResultCard({
   onCopy, 
   onFavorite, 
   isFavorited,
-  onSave 
+  onSave,
+  isMarkdown = false
 }: { 
   title: string, 
   content: string, 
@@ -543,7 +678,8 @@ function ResultCard({
   onCopy: () => void,
   onFavorite?: () => void,
   isFavorited?: boolean,
-  onSave?: () => void
+  onSave?: () => void,
+  isMarkdown?: boolean
 }) {
   return (
     <Card className="shadow-sm border-none bg-card">
@@ -558,7 +694,13 @@ function ResultCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-foreground leading-relaxed">{content}</p>
+        {isMarkdown ? (
+          <div className="prose-premium">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{content}</p>
+        )}
         {metadata && (
           <div className="grid gap-2 border-t pt-4">
             {metadata.map((m, j) => (

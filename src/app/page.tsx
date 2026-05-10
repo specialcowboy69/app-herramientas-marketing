@@ -19,6 +19,7 @@ import {
   MousePointer2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { InsideTheMachine } from '@/components/landing/InsideTheMachine';
 
 const tools = [
   { slug: 'business-idea', title: 'Ideas de Negocio', description: 'Generador de ideas de negocio', icon: Wand2 },
@@ -117,6 +118,9 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* NEW: TECHNICAL DEEP DIVE */}
+        <InsideTheMachine />
 
         {/* LOGOS / SOCIAL PROOF (Optional aesthetic block) */}
         <section className="w-full py-8 bg-background/20 border-y backdrop-blur-sm">

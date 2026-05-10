@@ -8,6 +8,15 @@ export type UserProfile = {
   updatedAt: Timestamp | Date;
 };
 
+export type Product = {
+  id: string;
+  name: string;
+  usp: string;
+  targetAudience?: string;
+  aiKnowledge?: Record<string, any>;
+  createdAt: Timestamp | Date;
+};
+
 export type Project = {
   id: string;
   userId: string;
@@ -18,6 +27,7 @@ export type Project = {
   brandTone: string | null;
   language: string;
   context: Record<string, any>;
+  products?: Record<string, Product>;
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
 };

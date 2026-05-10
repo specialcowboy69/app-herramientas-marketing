@@ -13,6 +13,12 @@ Las siguientes secciones contienen los datos del usuario para este proyecto:
 - **Tono de Marca:** {{tone}}
 === FIN DATOS ===
 
+=== MEMORIA DEL PRODUCTO ===
+Esta es información estratégica generada previamente para este producto específico. Úsala como base fundamental para tu redacción:
+- **Arquetipo de Cliente:** {{customerAvatar}}
+- **Puntos de Dolor:** {{painPoints}}
+=== FIN MEMORIA ===
+
 Idioma de respuesta: {{language}}
 
 INSTRUCCIONES DE SALIDA:

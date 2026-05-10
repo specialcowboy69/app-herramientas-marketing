@@ -23,10 +23,29 @@ export class BusinessStrategistAgent {
   }
 
   /**
+   * Procesa el objeto de conocimiento de IA para convertirlo en strings legibles por el prompt
+   */
+  private static stringifyKnowledge(context: any): { customerAvatar: string, painPoints: string, businessModel: string } {
+    const knowledge = context.aiKnowledge || {};
+    
+    const stringify = (val: any) => {
+      if (!val) return '';
+      return typeof val === 'string' ? val : JSON.stringify(val, null, 2);
+    };
+
+    return {
+      customerAvatar: stringify(knowledge.lastAvatar),
+      painPoints: stringify(knowledge.painPoints),
+      businessModel: stringify(knowledge.businessModel)
+    };
+  }
+
+  /**
    * Prepara el prompt completo para Business Idea
    */
   static async prepareBusinessIdeaPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
     const system = await this.getFileContent('strategist_persona.md');
+    const { businessModel } = this.stringifyKnowledge(context);
     const variables = {
       interests: input.interests || 'N/A',
       skills: input.skills || 'N/A',
@@ -35,7 +54,8 @@ export class BusinessStrategistAgent {
       problemsToSolve: input.problemsToSolve || 'N/A',
       businessType: input.businessType || 'N/A',
       projectDescription: context.description || 'N/A',
-      language: context.language || 'es'
+      language: context.language || 'es',
+      businessModel: businessModel || 'No proporcionado'
     };
     const user = await this.getFileContent('business_idea_skill.md', variables);
     return { system, user };
@@ -46,6 +66,7 @@ export class BusinessStrategistAgent {
    */
   static async prepareCustomerAvatarPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
     const system = await this.getFileContent('strategist_persona.md');
+    const { customerAvatar, painPoints } = this.stringifyKnowledge(context);
     const variables = {
       productOrService: input.productOrService || 'N/A',
       niche: input.niche || 'N/A',
@@ -53,7 +74,9 @@ export class BusinessStrategistAgent {
       mainProblem: input.mainProblem || 'N/A',
       awarenessLevel: input.awarenessLevel || 'N/A',
       projectDescription: context.description || 'N/A',
-      language: context.language || 'es'
+      language: context.language || 'es',
+      customerAvatar: customerAvatar || 'No proporcionado',
+      painPoints: painPoints || 'No proporcionado'
     };
     const user = await this.getFileContent('customer_avatar_skill.md', variables);
     return { system, user };

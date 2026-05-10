@@ -122,9 +122,69 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
   }
   html {
     @apply font-sans;
   }
+}
+
+@layer utilities {
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+}
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.backdrop-blur-xl {
+  backdrop-filter: blur(24px);
+}
+
+/* Premium Prose Styles for AI Content */
+.prose-premium h1 {
+  @apply text-4xl font-black text-foreground mb-10 text-center tracking-tight leading-tight;
+}
+
+.prose-premium h2 {
+  @apply text-2xl font-extrabold text-foreground mt-12 mb-6 text-center border-b border-primary/10 pb-4;
+}
+
+.prose-premium h3 {
+  @apply text-xl font-bold text-foreground mt-10 mb-4 text-center italic;
+}
+
+.prose-premium p {
+  @apply text-foreground/80 leading-relaxed mb-6 text-justify;
+}
+
+.prose-premium ul, .prose-premium ol {
+  @apply mb-6 ml-6 list-disc space-y-2;
+}
+
+.prose-premium li {
+  @apply text-muted-foreground;
+}
+
+.prose-premium strong {
+  @apply font-bold text-foreground;
+}
+
+.prose-premium blockquote {
+  @apply border-l-4 border-primary/30 pl-4 italic my-6 text-muted-foreground bg-primary/5 py-2 pr-4 rounded-r-lg;
+}
+
+.prose-premium hr {
+  @apply my-8 border-t border-border/50;
 }

@@ -26,11 +26,18 @@ export function Shell({ children, requireAuth = true }: { children: React.ReactN
 
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="relative flex h-screen bg-background isolate overflow-hidden">
+      {/* Background Blobs - Fixed to avoid layout shifts */}
+      <div className="fixed top-0 -left-4 w-96 h-96 bg-primary/10 rounded-full mix-blend-multiply filter blur-[128px] opacity-70 animate-blob -z-10" />
+      <div className="fixed top-0 -right-4 w-96 h-96 bg-purple-500/10 rounded-full mix-blend-multiply filter blur-[128px] opacity-70 animate-blob animation-delay-2000 -z-10" />
+      <div className="fixed -bottom-8 left-20 w-96 h-96 bg-pink-500/10 rounded-full mix-blend-multiply filter blur-[128px] opacity-70 animate-blob animation-delay-4000 -z-10" />
+
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="container max-w-6xl mx-auto py-8 px-6">
-          {children}
+      <main className="flex-1 overflow-y-auto scroll-smooth">
+        <div className="container max-w-7xl mx-auto py-12 px-6 lg:px-8">
+          <div className="bg-background/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 min-h-[calc(100vh-6rem)] shadow-2xl shadow-primary/5">
+            {children}
+          </div>
         </div>
       </main>
     </div>
