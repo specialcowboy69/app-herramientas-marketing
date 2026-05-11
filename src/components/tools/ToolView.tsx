@@ -21,13 +21,15 @@ import remarkGfm from 'remark-gfm';
 interface ToolViewProps {
   title: string;
   description: string;
+  toolName?: string;
   toolSlug: string;
   fields: {
     name: string;
     label: string;
     type: 'text' | 'textarea' | 'select';
     placeholder?: string;
-    options?: { label: string; value: string }[];
+    options?: (string | { label: string; value: string })[];
+    required?: boolean;
   }[];
   initialValues: Record<string, string>;
   extraContent?: React.ReactNode;
@@ -280,7 +282,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                         placeholder={field.placeholder}
                         value={formData[field.name]}
                         onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
-                        required
+                        required={field.required}
                       />
                     ) : field.type === 'select' ? (
                       <Select 
@@ -291,9 +293,13 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                           <SelectValue placeholder={field.placeholder} />
                         </SelectTrigger>
                         <SelectContent>
-                          {field.options?.map((opt, index) => (
-                            <SelectItem key={opt.value || index} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
+                          {field.options?.map((opt, index) => {
+                            const value = typeof opt === 'string' ? opt : opt.value;
+                            const label = typeof opt === 'string' ? opt : opt.label;
+                            return (
+                              <SelectItem key={value || index} value={value}>{label}</SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     ) : (
@@ -302,7 +308,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                         placeholder={field.placeholder}
                         value={formData[field.name]}
                         onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
-                        required
+                        required={field.required}
                       />
                     )}
                   </div>
