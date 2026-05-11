@@ -12,25 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default function BlogToolkitPage() {
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: blogToolkitSEO.faqs.map(faq => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
       <ToolView 
         title="Creador de Artículos"
         description="Genera borradores completos y títulos para tu blog."
@@ -60,7 +43,11 @@ export default function BlogToolkitPage() {
         ]}
       />
       <div className="border-t bg-background">
-        <ToolSEOContent data={blogToolkitSEO} />
+        <ToolSEOContent 
+          data={blogToolkitSEO} 
+          toolName="Creador de Artículos"
+          toolSlug="blog-toolkit"
+        />
       </div>
     </>
   );

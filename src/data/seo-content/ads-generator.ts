@@ -35,6 +35,10 @@ export const adsGeneratorSEO = {
     {
       title: "Para Creadores de Cursos",
       description: "Atrae leads cualificados a tus webinars o lanzamientos con ganchos psicológicos efectivos."
+    },
+    {
+      title: "Para el Sector Inmobiliario",
+      description: "Crea anuncios que resalten las características de las propiedades y capten leads interesados en comprar o alquilar."
     }
   ],
   faqs: [
@@ -49,6 +53,27 @@ export const adsGeneratorSEO = {
     {
       question: "¿Cuántas variaciones de anuncios puedo crear?",
       answer: "Puedes generar tantas iteraciones como necesites. Simplemente ajusta el tono o la oferta en el formulario y la IA te dará nuevas opciones listas para copiar y pegar en tu Business Manager."
+    },
+    {
+      question: "¿Qué es el CTR (Click-Through Rate)?",
+      answer: "El porcentaje de personas que hacen clic en tu anuncio después de verlo. Un CTR alto indica relevancia."
+    },
+    {
+      question: "¿Qué es el ROAS (Return on Ad Spend)?",
+      answer: "Ingresos generados por cada euro invertido en publicidad. Es la métrica clave de rentabilidad."
+    },
+    {
+      question: "¿Qué es el CPC (Cost Per Click)?",
+      answer: "El precio medio que pagas por cada clic en tu anuncio. Varía según la competencia y calidad del copy."
     }
+  ],
+  frameworks: [
+    { name: "AIDA", description: "Atención, Interés, Deseo y Acción. El framework clásico para guiar al usuario desde el descubrimiento hasta la conversión." },
+    { name: "PAS", description: "Problema, Agitación y Solución. Ideal para anuncios que atacan puntos de dolor específicos y ofrecen un alivio inmediato." }
+  ],
+  howToGuide: [
+    { step: 1, title: "Define tu oferta", description: "Introduce los detalles de tu producto o servicio y qué lo hace único frente a la competencia." },
+    { step: 2, title: "Selecciona el tono", description: "Ajusta la personalidad del anuncio (persuasivo, profesional o divertido) según tu audiencia ideal." },
+    { step: 3, title: "Copia y Escala", description: "Genera las variaciones, cópialas directamente en tu gestor de anuncios y empieza a medir resultados." }
   ]
 };

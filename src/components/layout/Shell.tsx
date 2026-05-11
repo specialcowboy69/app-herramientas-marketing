@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 
-export function Shell({ children, requireAuth = true }: { children: React.ReactNode; requireAuth?: boolean }) {
+export function Shell({ children, extraContent, requireAuth = true }: { children: React.ReactNode; extraContent?: React.ReactNode; requireAuth?: boolean }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -38,6 +38,7 @@ export function Shell({ children, requireAuth = true }: { children: React.ReactN
           <div className="bg-background/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 min-h-[calc(100vh-6rem)] shadow-2xl shadow-primary/5">
             {children}
           </div>
+          {extraContent}
         </div>
       </main>
     </div>

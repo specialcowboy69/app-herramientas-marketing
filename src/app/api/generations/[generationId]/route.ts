@@ -16,19 +16,27 @@ export async function PATCH(
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const userId = decodedToken.uid;
 
-    const { isFavorite } = await req.json();
+    const updates = await req.json();
 
     const genRef = adminDb.collection('generations').doc(generationId);
     const genDoc = await genRef.get();
 
-    if (!genDoc.exists || genDoc.data()?.userId !== userId) {
+    if (!genDoc.exists) {
       return NextResponse.json({ error: 'Generación no encontrada' }, { status: 404 });
     }
 
-    await genRef.update({ isFavorite });
+    if (genDoc.data()?.userId !== userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
 
-    return NextResponse.json({ success: true, isFavorite });
+    await genRef.update({
+      ...updates,
+      updatedAt: new Date()
+    });
+
+    return NextResponse.json({ success: true, ...updates });
   } catch (error: any) {
+    console.error('Error updating generation:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

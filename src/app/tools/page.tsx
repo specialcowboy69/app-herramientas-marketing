@@ -3,7 +3,7 @@
 import { Shell } from '@/components/layout/Shell';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Wand2, Users, ShoppingBag, Target, FileText, Megaphone, Search, PenTool, MousePointer2, Mic } from 'lucide-react';
+import { Wand2, Users, ShoppingBag, Target, FileText, Megaphone, Search, PenTool, MousePointer2, Mic, Play, Video, ShoppingCart, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 const tools = [
@@ -12,10 +12,14 @@ const tools = [
   { slug: 'pain-points', title: 'Puntos de Dolor', description: 'Identifica dolores de tu audiencia', icon: Target },
   { slug: 'naming-slogan', title: 'Nombres y Eslóganes', description: 'Nombres y eslóganes creativos', icon: FileText },
   { slug: 'product-description', title: 'Descripción de Producto', description: 'Copy persuasivo de producto', icon: ShoppingBag },
+  { slug: 'amazon-product', title: 'Amazon Product', description: 'Listados optimizados para Amazon A9', icon: ShoppingCart },
   { slug: 'ads-generator', title: 'Generador de Anuncios', description: 'Crea anuncios para FB/Google', icon: Megaphone },
   { slug: 'seo-brief', title: 'Estructura SEO', description: 'Estructura de contenido SEO', icon: Search },
   { slug: 'blog-toolkit', title: 'Creador de Artículos', description: 'Posts completos para tu blog', icon: PenTool },
+  { slug: 'framework-pas', title: 'Framework PAS', description: 'Copy Problema-Agitación-Solución', icon: MessageSquare },
   { slug: 'cta-generator', title: 'Llamadas a la Acción', description: 'Botones y llamadas a la acción', icon: MousePointer2 },
+  { slug: 'youtube-script', title: 'Guiones YouTube', description: 'Guiones con alta retención', icon: Video },
+  { slug: 'youtube-seo', title: 'YouTube Growth', description: 'Títulos y etiquetas SEO para YouTube', icon: Play },
   { slug: 'text-to-speech', title: 'Texto a Voz', description: 'Convierte texto en locuciones profesionales', icon: Mic },
 ];
 

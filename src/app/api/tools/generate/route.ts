@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     let output;
     
-    if (toolSlug === 'ads-generator' || toolSlug === 'cta-generator' || toolSlug === 'naming-slogan' || toolSlug === 'product-description') {
+    if (toolSlug === 'ads-generator' || toolSlug === 'cta-generator' || toolSlug === 'naming-slogan' || toolSlug === 'product-description' || toolSlug === 'amazon-product' || toolSlug === 'framework-pas') {
       // AGENTE: Copywriter
       const { CopywriterAgent } = await import('@/lib/agents/copywriter/copywriter_tools');
       let system, user;
@@ -107,6 +107,10 @@ export async function POST(req: NextRequest) {
         ({ system, user } = await CopywriterAgent.prepareCTAPrompt(input, context));
       } else if (toolSlug === 'naming-slogan') {
         ({ system, user } = await CopywriterAgent.prepareNamingPrompt(input, context));
+      } else if (toolSlug === 'amazon-product') {
+        ({ system, user } = await CopywriterAgent.prepareAmazonProductPrompt(input, context));
+      } else if (toolSlug === 'framework-pas') {
+        ({ system, user } = await CopywriterAgent.prepareFrameworkPASPrompt(input, context));
       } else {
         ({ system, user } = await CopywriterAgent.prepareProductDescriptionPrompt(input, context));
       }
@@ -123,6 +127,20 @@ export async function POST(req: NextRequest) {
         ({ system, user } = await SEOSpecialistAgent.prepareSEOBriefPrompt(input, context));
       } else {
         ({ system, user } = await SEOSpecialistAgent.prepareBlogToolkitPrompt(input, context));
+      }
+      
+      output = await generateJSON(user, undefined, system);
+    } else if (toolSlug === 'youtube-script' || toolSlug === 'youtube-seo') {
+      // AGENTE: Content Creator
+      const { CreatorAgent } = await import('@/lib/agents/content_creator/creator_tools');
+      let system, user;
+      
+      const context = isolatedContext || {};
+      
+      if (toolSlug === 'youtube-script') {
+        ({ system, user } = await CreatorAgent.prepareYouTubeScriptPrompt(input, context));
+      } else {
+        ({ system, user } = await CreatorAgent.prepareYouTubeSEOPrompt(input, context));
       }
       
       output = await generateJSON(user, undefined, system);

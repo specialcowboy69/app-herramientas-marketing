@@ -12,43 +12,30 @@ export const metadata: Metadata = {
 };
 
 export default function PainPointsPage() {
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: painPointsSEO.faqs.map(faq => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <ToolView 
-        title="Puntos de Dolor"
-        description="Identifica los problemas y frustraciones de tu audiencia."
-        toolSlug="pain-points"
-        initialValues={{
-          niche: '',
-          productOrService: '',
-          targetCustomer: '',
-        }}
-        fields={[
-          { name: 'niche', label: 'Nicho', type: 'text', placeholder: 'Ej: Marketing Digital' },
-          { name: 'productOrService', label: 'Producto/Servicio', type: 'text', placeholder: '¿Qué ofreces?' },
-          { name: 'targetCustomer', label: 'Cliente Objetivo', type: 'text', placeholder: '¿A quién investigamos?' },
-        ]}
-      />
-      <div className="border-t bg-background">
-        <ToolSEOContent data={painPointsSEO} />
-      </div>
-    </>
+    <ToolView 
+      title="Puntos de Dolor"
+      description="Identifica los problemas y frustraciones de tu audiencia."
+      toolSlug="pain-points"
+      initialValues={{
+        niche: '',
+        productOrService: '',
+        targetCustomer: '',
+      }}
+      fields={[
+        { name: 'niche', label: 'Nicho', type: 'text', placeholder: 'Ej: Marketing Digital' },
+        { name: 'productOrService', label: 'Producto/Servicio', type: 'text', placeholder: '¿Qué ofreces?' },
+        { name: 'targetCustomer', label: 'Cliente Objetivo', type: 'text', placeholder: '¿A quién investigamos?' },
+      ]}
+      extraContent={
+        <div className="border-t bg-background mt-12 pt-12 -mx-8 px-8 rounded-b-3xl">
+          <ToolSEOContent 
+            data={painPointsSEO} 
+            toolName="Puntos de Dolor"
+            toolSlug="pain-points"
+          />
+        </div>
+      }
+    />
   );
 }

@@ -35,6 +35,10 @@ export const seoBriefSEO = {
     {
       title: "Equipos de Inbound Marketing",
       description: "Asegúrate de que cada post del blog corporativo cumple con los requisitos SEO técnicos mínimos."
+    },
+    {
+      title: "Redactores Freelance",
+      description: "Recibe una estructura clara y profesional para empezar a redactar sin dudas sobre qué cubrir."
     }
   ],
   faqs: [
@@ -49,6 +53,23 @@ export const seoBriefSEO = {
     {
       question: "¿Cómo determina la IA qué estructura es mejor?",
       answer: "La IA ha sido entrenada con millones de páginas que ya posicionan en Google, aprendiendo qué tipo de sub-temas (H2) espera encontrar el usuario cuando busca una palabra clave específica."
+    },
+    {
+      question: "¿Qué es el Search Intent (Intención de Búsqueda)?",
+      answer: "El objetivo real que tiene un usuario al realizar una consulta en un buscador."
+    },
+    {
+      question: "¿Qué son las Entidades SEO?",
+      answer: "Conceptos, lugares o personas que los buscadores identifican como únicos y relacionados entre sí para entender el contexto."
     }
+  ],
+  frameworks: [
+    { name: "EEAT", description: "Experiencia, Especialización, Autoridad y Confiabilidad. El estándar de Google para evaluar la calidad del contenido." },
+    { name: "Clústeres de Contenido", description: "Estrategia de arquitectura web que organiza el contenido en temas pilares y artículos satélite para mejorar la autoridad temática." }
+  ],
+  howToGuide: [
+    { step: 1, title: "Introduce tu Keyword", description: "Escribe la palabra clave principal que deseas posicionar y las secundarias si las tienes." },
+    { step: 2, title: "Analiza la Intención", description: "La IA identificará si el usuario busca información, comprar algo o comparar opciones." },
+    { step: 3, title: "Genera la Estructura", description: "Obtén en segundos un esquema de H2 y H3 optimizado para capturar el tráfico orgánico." }
   ]
 };

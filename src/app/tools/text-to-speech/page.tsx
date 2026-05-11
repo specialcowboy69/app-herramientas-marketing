@@ -13,28 +13,15 @@ export const metadata: Metadata = {
 };
 
 export default function TextToSpeechPage() {
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: textToSpeechSEO.faqs.map(faq => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-
   return (
     <Shell>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
       <TextToSpeechView />
       <div className="border-t bg-background mt-16">
-        <ToolSEOContent data={textToSpeechSEO} />
+        <ToolSEOContent 
+          data={textToSpeechSEO} 
+          toolName="Generador de Texto a Voz"
+          toolSlug="text-to-speech"
+        />
       </div>
     </Shell>
   );

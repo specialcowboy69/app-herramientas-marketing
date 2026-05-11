@@ -121,4 +121,52 @@ export class CopywriterAgent {
     const user = await this.getFileContent('product_description_skill.md', variables);
     return { system, user };
   }
+
+  /**
+   * Prepara el prompt completo para Amazon Product
+   */
+  static async prepareAmazonProductPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
+    const system = await this.getFileContent('copywriter_persona.md');
+    
+    // Preparar el contexto del proyecto (memoria)
+    const contextObj = {
+      ...context,
+      aiKnowledge: context.aiKnowledge || {}
+    };
+    const projectContext = JSON.stringify(contextObj, null, 2);
+
+    const variables = {
+      projectContext: projectContext,
+      productName: input.productName || 'N/A',
+      keyFeatures: input.keyFeatures || 'N/A',
+      mainBenefit: input.mainBenefit || 'N/A',
+      targetPainPoint: input.targetPainPoint || 'N/A'
+    };
+    
+    const user = await this.getFileContent('amazon_product_skill.md', variables);
+    return { system, user };
+  }
+
+  /**
+   * Prepara el prompt completo para Framework PAS
+   */
+  static async prepareFrameworkPASPrompt(input: any, context: any): Promise<{ system: string; user: string }> {
+    const system = await this.getFileContent('copywriter_persona.md');
+    
+    // Preparar el contexto del proyecto (memoria)
+    const contextObj = {
+      ...context,
+      aiKnowledge: context.aiKnowledge || {}
+    };
+    const projectContext = JSON.stringify(contextObj, null, 2);
+
+    const variables = {
+      projectContext: projectContext,
+      topic: input.topic || 'N/A',
+      angle: input.angle || 'N/A'
+    };
+    
+    const user = await this.getFileContent('framework_pas_skill.md', variables);
+    return { system, user };
+  }
 }

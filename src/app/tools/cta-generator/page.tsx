@@ -12,62 +12,49 @@ export const metadata: Metadata = {
 };
 
 export default function CtaGeneratorPage() {
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: ctaGeneratorSEO.faqs.map(faq => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <ToolView 
-        title="Llamadas a la Acción"
-        description="Llamadas a la acción persuasivas para convertir."
-        toolSlug="cta-generator"
-        initialValues={{
-          goal: '',
-          channel: 'website',
-          urgencyLevel: 'medium',
-        }}
-        fields={[
-          { name: 'goal', label: '¿Qué quieres que hagan?', type: 'textarea', placeholder: 'Ej: Registrarse a la newsletter' },
-          { 
-            name: 'channel', 
-            label: 'Canal', 
-            type: 'select',
-            options: [
-              { label: 'Sitio Web', value: 'website' },
-              { label: 'Email', value: 'email' },
-              { label: 'Anuncio', value: 'ad' },
-              { label: 'Redes Sociales', value: 'social' },
-            ]
-          },
-          { 
-            name: 'urgencyLevel', 
-            label: 'Nivel de Urgencia', 
-            type: 'select',
-            options: [
-              { label: 'Bajo', value: 'low' },
-              { label: 'Medio', value: 'medium' },
-              { label: 'Alto', value: 'high' },
-            ]
-          },
-        ]}
-      />
-      <div className="border-t bg-background">
-        <ToolSEOContent data={ctaGeneratorSEO} />
-      </div>
-    </>
+    <ToolView 
+      title="Llamadas a la Acción"
+      description="Llamadas a la acción persuasivas para convertir."
+      toolSlug="cta-generator"
+      initialValues={{
+        goal: '',
+        channel: 'website',
+        urgencyLevel: 'medium',
+      }}
+      fields={[
+        { name: 'goal', label: '¿Qué quieres que hagan?', type: 'textarea', placeholder: 'Ej: Registrarse a la newsletter' },
+        { 
+          name: 'channel', 
+          label: 'Canal', 
+          type: 'select',
+          options: [
+            { label: 'Sitio Web', value: 'website' },
+            { label: 'Email', value: 'email' },
+            { label: 'Anuncio', value: 'ad' },
+            { label: 'Redes Sociales', value: 'social' },
+          ]
+        },
+        { 
+          name: 'urgencyLevel', 
+          label: 'Nivel de Urgencia', 
+          type: 'select',
+          options: [
+            { label: 'Bajo', value: 'low' },
+            { label: 'Medio', value: 'medium' },
+            { label: 'Alto', value: 'high' },
+          ]
+        },
+      ]}
+      extraContent={
+        <div className="border-t bg-background mt-12 pt-12 -mx-8 px-8 rounded-b-3xl">
+          <ToolSEOContent 
+            data={ctaGeneratorSEO} 
+            toolName="Llamadas a la Acción"
+            toolSlug="cta-generator"
+          />
+        </div>
+      }
+    />
   );
 }

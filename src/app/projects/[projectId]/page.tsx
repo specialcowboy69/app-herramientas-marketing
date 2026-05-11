@@ -23,7 +23,8 @@ import {
   Target,
   BrainCircuit,
   Brain,
-  Zap
+  Zap,
+  Star
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -138,6 +139,90 @@ export default function ProjectDetailPage() {
       toast.error('Error al añadir producto');
     } finally {
       setIsAddingProduct(false);
+    }
+  };
+
+  const formatOutputToMarkdown = (toolSlug: string, output: any) => {
+    if (!output) return '';
+    let markdown = `# Generación de ${toolSlug.replace('-', ' ')}\n\n`;
+    
+    Object.entries(output).forEach(([key, value]) => {
+      const label = key.replace(/([A-Z])/g, ' $1').trim();
+      markdown += `## ${label.toUpperCase()}\n\n`;
+      
+      if (typeof value === 'string') {
+        markdown += `${value}\n\n`;
+      } else if (Array.isArray(value)) {
+        value.forEach((v) => {
+          if (typeof v === 'object' && v !== null) {
+            Object.entries(v).forEach(([nk, nv]) => {
+              markdown += `**${nk}**: ${nv}\n\n`;
+            });
+            markdown += `---\n\n`;
+          } else {
+            markdown += `- ${v}\n`;
+          }
+        });
+        markdown += '\n';
+      } else if (typeof value === 'object' && value !== null) {
+        Object.entries(value as any).forEach(([k, v]) => {
+          markdown += `**${k}**: ${v}\n\n`;
+        });
+      }
+    });
+    
+    return markdown;
+  };
+
+  const handleSaveSectionToDocuments = async (gen: any, sectionKey: string, sectionValue: any) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const markdown = formatOutputToMarkdown(gen.toolSlug, { [sectionKey]: sectionValue });
+      
+      const response = await fetch(`/api/projects/${projectId}/documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: `${gen.toolSlug} - ${sectionKey.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}`,
+          content: markdown
+        })
+      });
+
+      if (!response.ok) throw new Error('Error al guardar documento');
+      
+      const newDoc = await response.json();
+      setDocuments([newDoc, ...documents]);
+      toast.success('Sección guardada en Documentos correctamente');
+    } catch (error) {
+      toast.error('Error al guardar documento');
+    }
+  };
+
+  const handleToggleSectionFavorite = async (gen: any, sectionKey: string) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const currentFavorites = gen.favoriteSections || {};
+      const newStatus = !currentFavorites[sectionKey];
+      const newFavorites = { ...currentFavorites, [sectionKey]: newStatus };
+      
+      const response = await fetch(`/api/generations/${gen.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ favoriteSections: newFavorites })
+      });
+
+      if (!response.ok) throw new Error('Error al actualizar favorito');
+      
+      setGenerations(generations.map(g => g.id === gen.id ? { ...g, favoriteSections: newFavorites } : g));
+      toast.success(newStatus ? 'Sección añadida a favoritos' : 'Sección quitada de favoritos');
+    } catch (error) {
+      toast.error('Error al actualizar favorito');
     }
   };
 
@@ -269,32 +354,61 @@ export default function ProjectDetailPage() {
                     generations.slice(0, 5).map((gen) => (
                       <Dialog key={gen.id}>
                         <DialogTrigger asChild>
-                          <div className="p-3 rounded-lg bg-muted/30 border cursor-pointer hover:bg-muted/50 transition-colors">
-                            <div className="text-xs font-bold uppercase tracking-wider opacity-50 mb-1">{gen.toolSlug}</div>
+                          <div className="p-3 rounded-lg bg-muted/30 border cursor-pointer hover:bg-muted/50 transition-colors relative group">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-xs font-bold uppercase tracking-wider opacity-50">{gen.toolSlug}</div>
+                              {Object.values(gen.favoriteSections || {}).some(Boolean) && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
+                            </div>
                             <div className="text-xs line-clamp-2 text-muted-foreground">
                               {getGenerationPreview(gen.toolSlug, gen.outputPayload)}
                             </div>
                           </div>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle className="uppercase tracking-wider">
-                              Detalle: {gen.toolSlug.replace('-', ' ')}
-                            </DialogTitle>
-                            <DialogDescription>
-                              Contenido generado en esta sesión.
-                            </DialogDescription>
+                        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                          <DialogHeader className="p-6 pb-2">
+                            <div className="flex items-center justify-between w-full pr-8">
+                              <div>
+                                <DialogTitle className="uppercase tracking-wider">
+                                  Detalle: {gen.toolSlug.replace('-', ' ')}
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Contenido generado en esta sesión.
+                                </DialogDescription>
+                              </div>
+                            </div>
                           </DialogHeader>
-                          <div className="mt-4 space-y-4">
+                          <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-4">
                             {Object.entries(gen.outputPayload || {}).map(([key, value]) => {
                               const valStr = typeof value === 'string' ? value : '';
                               const isMarkdown = valStr.includes('##') || valStr.includes('**') || valStr.length > 200;
 
+                              const isSectionFavorite = gen.favoriteSections?.[key];
+
                               return (
-                                <div key={key} className="bg-muted/30 border border-white/5 p-5 rounded-2xl">
-                                  <h4 className="font-black mb-3 capitalize text-[10px] tracking-[0.2em] text-primary uppercase">
-                                    {key.replace(/([A-Z])/g, ' $1').trim()}
-                                  </h4>
+                                <div key={key} className="bg-muted/30 border border-white/5 p-5 rounded-2xl group relative">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-black capitalize text-[10px] tracking-[0.2em] text-primary uppercase">
+                                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                                    </h4>
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => handleToggleSectionFavorite(gen, key)}
+                                        className={`h-8 px-2 ${isSectionFavorite ? 'bg-amber-500/10 border-amber-500/50 text-amber-600 hover:bg-amber-500/20' : 'text-muted-foreground hover:text-foreground'}`}
+                                      >
+                                        <Star className={`h-4 w-4 ${isSectionFavorite ? 'fill-current' : ''}`} />
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleSaveSectionToDocuments(gen, key, value)}
+                                        className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                                      >
+                                        <Plus className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
                                   {typeof value === 'string' ? (
                                     isMarkdown ? (
                                       <div className="prose-premium prose-sm">

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -8,6 +10,7 @@ import {
 } from '@/components/ui/accordion';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 export interface SEOData {
   hero: {
@@ -22,10 +25,13 @@ export interface SEOData {
     description: string;
     icon: string;
   }[];
-  useCases: {
+  useCases?: {
     title: string;
     description: string;
   }[];
+  frameworks?: { name: string; description: string }[];
+  howToGuide?: { step: number; title: string; description: string }[];
+  glossary?: { term: string; definition: string }[];
   faqs: {
     question: string;
     answer: string;
@@ -35,6 +41,8 @@ export interface SEOData {
 interface ToolSEOContentProps {
   data: SEOData;
   className?: string;
+  toolName: string;
+  toolSlug: string;
 }
 
 const DynamicIcon = ({ name, className }: { name: string; className?: string }) => {
@@ -43,9 +51,85 @@ const DynamicIcon = ({ name, className }: { name: string; className?: string }) 
   return <IconComponent className={className} />;
 };
 
-export function ToolSEOContent({ data, className }: ToolSEOContentProps) {
+export function ToolSEOContent({ data, className, toolName, toolSlug }: ToolSEOContentProps) {
+  const pathname = usePathname();
+  
+  // Entity SEO: Structured Data
+  const organizationSchema = {
+    "@type": "Organization",
+    "name": "Copia Niches",
+    "url": "https://copianiches.com",
+    "logo": "https://copianiches.com/logo.png"
+  };
+
+  const softwareSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": toolName,
+    "description": data.hero.description,
+    "url": `https://copianiches.com${pathname}`,
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "All",
+    "provider": organizationSchema,
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Panel",
+        "item": "https://copianiches.com/dashboard"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Herramientas",
+        "item": "https://copianiches.com/tools"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": toolName,
+        "item": `https://copianiches.com${pathname}`
+      }
+    ]
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": data.faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
+
   return (
     <div className={cn("w-full max-w-5xl mx-auto py-16 space-y-24", className)}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       
       {/* 1. Hero / Intro */}
       <section className="text-center max-w-3xl mx-auto space-y-6">
@@ -62,7 +146,7 @@ export function ToolSEOContent({ data, className }: ToolSEOContentProps) {
         <h3 className="text-2xl font-bold text-center">{data.benefitsTitle || 'Beneficios y Características Clave'}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {data.benefits.map((benefit, index) => (
-            <Card key={index} className="bg-card/50 backdrop-blur border-primary/10 hover:border-primary/30 transition-colors shadow-sm">
+            <Card key={benefit.title} className="bg-card/50 backdrop-blur border-primary/10 hover:border-primary/30 transition-colors shadow-sm">
               <CardHeader>
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                   <DynamicIcon name={benefit.icon} className="h-6 w-6 text-primary" />
@@ -79,27 +163,67 @@ export function ToolSEOContent({ data, className }: ToolSEOContentProps) {
         </div>
       </section>
 
-      {/* 3. Use Cases */}
-      <section className="bg-primary/5 rounded-3xl p-8 md:p-12">
-        <div className="max-w-4xl mx-auto">
-          <h3 className="text-2xl font-bold text-center mb-10">{data.useCasesTitle || 'Casos de Uso Ideales'}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {data.useCases.map((useCase, index) => (
-              <div key={index} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-primary" />
-                  <h4 className="font-bold text-lg">{useCase.title}</h4>
+      {/* 3. Use Cases (Condicional) */}
+      {data.useCases && (
+        <section className="bg-primary/5 rounded-3xl p-8 md:p-12">
+          <div className="max-w-4xl mx-auto">
+            <h3 className="text-2xl font-bold text-center mb-10">{data.useCasesTitle || 'Casos de Uso Ideales'}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {data.useCases.map((useCase, index) => (
+                <div key={useCase.title} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    <h4 className="font-bold text-lg">{useCase.title}</h4>
+                  </div>
+                  <p className="text-muted-foreground text-sm leading-relaxed pl-4 border-l border-primary/20">
+                    {useCase.description}
+                  </p>
                 </div>
-                <p className="text-muted-foreground text-sm leading-relaxed pl-4 border-l border-primary/20">
-                  {useCase.description}
-                </p>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+
+      {/* 5. Frameworks (Condicional) */}
+      {data.frameworks && (
+        <section className="space-y-8">
+          <h3 className="text-2xl font-bold text-center">Frameworks de Trabajo</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {data.frameworks.map((framework, index) => (
+              <Card key={framework.name} className="bg-primary/5 border-none shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-lg text-primary">{framework.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{framework.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 6. How To Guide (Condicional) */}
+      {data.howToGuide && (
+        <section className="max-w-4xl mx-auto space-y-10">
+          <h3 className="text-2xl font-bold text-center">Guía paso a paso</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {data.howToGuide.map((step, index) => (
+              <div key={step.step} className="relative p-6 bg-card rounded-2xl border border-primary/10 h-full">
+                <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-lg">
+                  {step.step}
+                </div>
+                <h4 className="font-bold text-lg mb-2 mt-2">{step.title}</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* 4. FAQs */}
+      {/* 6. FAQs (Movido al final) */}
       <section className="max-w-3xl mx-auto space-y-8">
         <div className="text-center space-y-4">
           <h3 className="text-2xl font-bold">{data.faqsTitle || 'Preguntas Frecuentes'}</h3>
@@ -107,7 +231,7 @@ export function ToolSEOContent({ data, className }: ToolSEOContentProps) {
         </div>
         <Accordion type="single" collapsible className="w-full">
           {data.faqs.map((faq, index) => (
-            <AccordionItem key={index} value={`item-${index}`} className="border-primary/10">
+            <AccordionItem key={faq.question} value={`item-${index}`} className="border-primary/10">
               <AccordionTrigger className="text-left font-semibold hover:text-primary transition-colors">
                 {faq.question}
               </AccordionTrigger>

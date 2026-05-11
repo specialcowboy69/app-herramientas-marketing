@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { auth } from '@/lib/firebase/client';
-import { Loader2, Sparkles, Copy, Star, Plus, ArrowRight, Zap, Package } from 'lucide-react';
+import { Loader2, Sparkles, Copy, Star, Plus, ArrowRight, Zap, Package, ChevronRight, BarChart3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,9 +30,10 @@ interface ToolViewProps {
     options?: { label: string; value: string }[];
   }[];
   initialValues: Record<string, string>;
+  extraContent?: React.ReactNode;
 }
 
-export function ToolView({ title, description, toolSlug, fields, initialValues }: ToolViewProps) {
+export function ToolView({ title, description, toolSlug, fields, initialValues, extraContent }: ToolViewProps) {
   const { user, userData } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -194,7 +195,19 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
   };
 
   return (
-    <Shell requireAuth={false}>
+    <Shell requireAuth={false} extraContent={extraContent}>
+      <div className="mb-8 flex items-center gap-2 text-xs font-medium text-muted-foreground bg-muted/30 w-max px-4 py-2 rounded-full border border-white/5">
+        <Link href="/dashboard" className="hover:text-primary flex items-center gap-1 transition-colors">
+          <BarChart3 className="h-3 w-3" /> Panel
+        </Link>
+        <ChevronRight className="h-3 w-3 opacity-50" />
+        <Link href="/tools" className="hover:text-primary transition-colors">
+          Herramientas
+        </Link>
+        <ChevronRight className="h-3 w-3 opacity-50" />
+        <span className="text-foreground font-bold">{title}</span>
+      </div>
+
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
           <div>
@@ -211,7 +224,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
               <CardContent className="space-y-4">
                 {!user ? (
                   <div className="bg-primary/5 border border-primary/20 p-4 rounded-md text-sm text-foreground mb-4">
-                    Para usar esta herramienta necesitas iniciar sesión y tener una suscripción activa. <Link href="/login" className="underline font-medium text-primary">Iniciar sesión</Link>.
+                    Para usar esta herramienta necesitas <Link href="/signup" className="underline font-medium text-primary">registrarte</Link> o <Link href="/login" className="underline font-medium text-primary">iniciar sesión</Link>.
                   </div>
                 ) : isLimitReached ? (
                   <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-md text-sm text-foreground mb-4 flex flex-col gap-2">
@@ -224,13 +237,13 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                 ) : (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Proyecto</label>
-                    <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                    <Select value={selectedProjectId || ""} onValueChange={setSelectedProjectId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un proyecto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        {projects.map((p, index) => (
+                          <SelectItem key={p.id || index} value={p.id}>{p.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -247,8 +260,8 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                         <SelectValue placeholder="Selecciona el producto específico" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(selectedProject.products || {}).map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        {Object.values(selectedProject.products || {}).map((p: any, index) => (
+                          <SelectItem key={p.id || index} value={p.id}>{p.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -271,15 +284,15 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                       />
                     ) : field.type === 'select' ? (
                       <Select 
-                        value={formData[field.name]} 
+                        value={formData[field.name] || ""} 
                         onValueChange={(val) => setFormData({ ...formData, [field.name]: val })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={field.placeholder} />
                         </SelectTrigger>
                         <SelectContent>
-                          {field.options?.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          {field.options?.map((opt, index) => (
+                            <SelectItem key={opt.value || index} value={opt.value}>{opt.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -651,6 +664,30 @@ export function ToolView({ title, description, toolSlug, fields, initialValues }
                       onSave={() => saveAsDocument('CTA Emocional', c)}
                     />
                   ))}
+                </div>
+              )}
+
+              {/* Generic Rendering for new tools */}
+              {['amazon-product', 'framework-pas', 'youtube-script', 'youtube-seo'].includes(toolSlug) && result && (
+                <div className="space-y-4">
+                  {Object.entries(result).map(([key, value]: [string, any], i: number) => {
+                    const title = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
+                    const content = typeof value === 'string' ? value : 
+                                    Array.isArray(value) ? value.join('\n') : 
+                                    JSON.stringify(value, null, 2);
+                    return (
+                      <ResultCard 
+                        key={i} 
+                        title={title} 
+                        content={content} 
+                        isMarkdown={typeof value === 'string'}
+                        onCopy={() => copyToClipboard(content)} 
+                        onFavorite={() => saveAsFavorite({ [key]: value }, `${toolSlug}-${key}-${i}`)}
+                        isFavorited={favoritedItems.has(`${toolSlug}-${key}-${i}`)}
+                        onSave={() => saveAsDocument(`${title}`, content)}
+                      />
+                    );
+                  })}
                 </div>
               )}
 

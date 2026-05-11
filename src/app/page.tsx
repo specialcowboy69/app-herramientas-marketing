@@ -27,10 +27,14 @@ const tools = [
   { slug: 'pain-points', title: 'Puntos de Dolor', description: 'Identifica dolores de tu audiencia', icon: Target },
   { slug: 'naming-slogan', title: 'Nombres y Eslóganes', description: 'Nombres y eslóganes creativos', icon: FileText },
   { slug: 'product-description', title: 'Descripción de Producto', description: 'Copy persuasivo de producto', icon: ShoppingBag },
+  { slug: 'amazon-product', title: 'Amazon Product', description: 'Listados optimizados para Amazon', icon: ShoppingBag },
   { slug: 'ads-generator', title: 'Generador de Anuncios', description: 'Crea anuncios para FB/Google', icon: Megaphone },
   { slug: 'seo-brief', title: 'Estructura SEO', description: 'Estructura de contenido SEO', icon: Search },
   { slug: 'blog-toolkit', title: 'Creador de Artículos', description: 'Posts completos para tu blog', icon: PenTool },
+  { slug: 'framework-pas', title: 'Framework PAS', description: 'Copy Problema-Agitación-Solución', icon: PenTool },
   { slug: 'cta-generator', title: 'Llamadas a la Acción', description: 'Botones y llamadas a la acción', icon: MousePointer2 },
+  { slug: 'youtube-script', title: 'Guiones YouTube', description: 'Guiones con alta retención', icon: PenTool },
+  { slug: 'youtube-seo', title: 'YouTube Growth', description: 'Títulos y etiquetas SEO', icon: Search },
 ];
 
 export default function LandingPage() {
