@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { 
   Wand2, 
   Users, 
