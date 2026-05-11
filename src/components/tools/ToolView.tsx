@@ -442,7 +442,8 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   content={idea.summary} 
                   metadata={[
                     { label: 'Monetización', value: idea.monetizationModel },
-                    { label: 'Primer Paso', value: idea.firstStep }
+                    { label: 'Primer Paso', value: idea.firstStep },
+                    { label: 'Nota del Estratega', value: idea.strategistRationale }
                   ]} 
                   onCopy={() => copyToClipboard(JSON.stringify(idea, null, 2))}
                   onFavorite={() => saveAsFavorite(idea, `idea-${i}`)}
@@ -458,7 +459,8 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   metadata={[
                     { label: 'Demografía', value: result.demographics },
                     { label: 'Frustraciones', value: result.frustrations },
-                    { label: 'Deseos', value: result.desires }
+                    { label: 'Deseos', value: result.desires },
+                    { label: 'Nota del Estratega', value: result.strategistRationale }
                   ]} 
                   onCopy={() => copyToClipboard(JSON.stringify(result, null, 2))}
                   onFavorite={() => saveAsFavorite(result, 'avatar')}
@@ -493,6 +495,15 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     isFavorited={favoritedItems.has('desc-benefits')}
                     onSave={() => saveAsDocument(`${result.productName} - Benefits`, result.primaryBenefits?.join('\n'))}
                   />
+                  {result.copywriterNote && (
+                    <ResultCard 
+                      title="Estrategia de Copywriting" 
+                      content={result.copywriterNote} 
+                      onCopy={() => copyToClipboard(result.copywriterNote)} 
+                      onFavorite={() => saveAsFavorite({ note: result.copywriterNote }, 'desc-note')}
+                      isFavorited={favoritedItems.has('desc-note')}
+                    />
+                  )}
                 </div>
               )}
 
@@ -503,7 +514,8 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   content={pp.emotionalImpact} 
                   metadata={[
                     { label: 'Impacto Práctico', value: pp.practicalImpact },
-                    { label: 'Ángulo de Venta', value: pp.messagingAngle }
+                    { label: 'Ángulo de Venta', value: pp.messagingAngle },
+                    { label: 'Nota del Estratega', value: pp.strategistRationale }
                   ]} 
                   onCopy={() => copyToClipboard(JSON.stringify(pp, null, 2))}
                   onFavorite={() => saveAsFavorite(pp, `pp-${i}`)}
@@ -518,7 +530,8 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   title={opt.brandName} 
                   content={opt.slogan} 
                   metadata={[
-                    { label: 'Razón', value: opt.rationale }
+                    { label: 'Razón', value: opt.rationale },
+                    { label: 'Nota del Copywriter', value: opt.copywriterNote }
                   ]} 
                   onCopy={() => copyToClipboard(`${opt.brandName}: ${opt.slogan}`)}
                   onFavorite={() => saveAsFavorite(opt, `opt-${i}`)}
@@ -551,6 +564,15 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onSave={() => saveAsDocument(`Ad Body ${i+1}`, b)}
                     />
                   ))}
+                  {result.copywriterNote && (
+                    <ResultCard 
+                      title="Estrategia de Copywriting" 
+                      content={result.copywriterNote} 
+                      onCopy={() => copyToClipboard(result.copywriterNote)} 
+                      onFavorite={() => saveAsFavorite({ note: result.copywriterNote }, 'ad-note')}
+                      isFavorited={favoritedItems.has('ad-note')}
+                    />
+                  )}
                 </div>
               )}
 
@@ -568,6 +590,17 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     isFavorited={favoritedItems.has('seo-brief-summary')}
                     onSave={() => saveAsDocument('Resumen SEO', result.intentSummary)}
                   />
+                  
+                  {result.semanticEntities?.length > 0 && (
+                    <ResultCard 
+                      title="Entity SEO y E-E-A-T" 
+                      content={`Entidades Semánticas:\n${result.semanticEntities.join(', ')}\n\n${result.eeatRecommendation || ''}`}
+                      onCopy={() => copyToClipboard(`Entidades: ${result.semanticEntities?.join(', ')}\n\n${result.eeatRecommendation}`)}
+                      onFavorite={() => saveAsFavorite({ entities: result.semanticEntities, eeat: result.eeatRecommendation }, 'seo-brief-entities')}
+                      isFavorited={favoritedItems.has('seo-brief-entities')}
+                      onSave={() => saveAsDocument('Entity SEO y EEAT', `Entidades: ${result.semanticEntities?.join(', ')}\n\n${result.eeatRecommendation}`)}
+                    />
+                  )}
                   
                   {result.metaDescriptions?.length > 0 && (
                     <ResultCard 
@@ -632,6 +665,13 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     isFavorited={favoritedItems.has('blog-draft')}
                     onSave={() => saveAsDocument(`${result.titles?.[0]} (Draft)`, result.fullDraft)}
                   />
+                  {result.seoNote && (
+                    <ResultCard 
+                      title="Estrategia de Posicionamiento" 
+                      content={result.seoNote}
+                      onCopy={() => copyToClipboard(result.seoNote)}
+                    />
+                  )}
                 </div>
               )}
 
@@ -670,6 +710,13 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onSave={() => saveAsDocument('CTA Emocional', c)}
                     />
                   ))}
+                  {result.copywriterNote && (
+                    <ResultCard 
+                      title="Estrategia CRO" 
+                      content={result.copywriterNote}
+                      onCopy={() => copyToClipboard(result.copywriterNote)}
+                    />
+                  )}
                 </div>
               )}
 

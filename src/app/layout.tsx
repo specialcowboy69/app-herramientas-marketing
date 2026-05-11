@@ -7,8 +7,8 @@ import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Idea Generator",
-  description: "Generate ideas, copy and SEO content with AI",
+  title: "Magnificus",
+  description: "Plataforma avanzada de IA para marketing y estrategia",
 };
 
 export default function RootLayout({

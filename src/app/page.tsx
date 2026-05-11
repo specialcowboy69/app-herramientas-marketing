@@ -16,25 +16,29 @@ import {
   FileText,
   ShoppingBag,
   PenTool,
-  MousePointer2
+  MousePointer2,
+  MessageSquare,
+  Video,
+  ShoppingCart,
+  Play
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { InsideTheMachine } from '@/components/landing/InsideTheMachine';
 
 const tools = [
-  { slug: 'business-idea', title: 'Ideas de Negocio', description: 'Generador de ideas de negocio', icon: Wand2 },
-  { slug: 'customer-avatar', title: 'Avatar de Cliente', description: 'Define a tu cliente ideal', icon: Users },
-  { slug: 'pain-points', title: 'Puntos de Dolor', description: 'Identifica dolores de tu audiencia', icon: Target },
-  { slug: 'naming-slogan', title: 'Nombres y Eslóganes', description: 'Nombres y eslóganes creativos', icon: FileText },
-  { slug: 'product-description', title: 'Descripción de Producto', description: 'Copy persuasivo de producto', icon: ShoppingBag },
-  { slug: 'amazon-product', title: 'Amazon Product', description: 'Listados optimizados para Amazon', icon: ShoppingBag },
-  { slug: 'ads-generator', title: 'Generador de Anuncios', description: 'Crea anuncios para FB/Google', icon: Megaphone },
-  { slug: 'seo-brief', title: 'Estructura SEO', description: 'Estructura de contenido SEO', icon: Search },
-  { slug: 'blog-toolkit', title: 'Creador de Artículos', description: 'Posts completos para tu blog', icon: PenTool },
-  { slug: 'framework-pas', title: 'Framework PAS', description: 'Copy Problema-Agitación-Solución', icon: PenTool },
-  { slug: 'cta-generator', title: 'Llamadas a la Acción', description: 'Botones y llamadas a la acción', icon: MousePointer2 },
-  { slug: 'youtube-script', title: 'Guiones YouTube', description: 'Guiones con alta retención', icon: PenTool },
-  { slug: 'youtube-seo', title: 'YouTube Growth', description: 'Títulos y etiquetas SEO', icon: Search },
+  { slug: 'business-idea', title: 'Ideas de Negocio', description: 'Generador de ideas de negocio innovadoras y rentables.', icon: Wand2, category: 'Estrategia', color: 'bg-amber-50 text-amber-600' },
+  { slug: 'customer-avatar', title: 'Avatar de Cliente', description: 'Define detalladamente a tu cliente ideal para campañas más precisas.', icon: Users, category: 'Estrategia', color: 'bg-indigo-50 text-indigo-600' },
+  { slug: 'pain-points', title: 'Puntos de Dolor', description: 'Identifica los dolores reales de tu audiencia para conectar mejor.', icon: Target, category: 'Estrategia', color: 'bg-rose-50 text-rose-600' },
+  { slug: 'naming-slogan', title: 'Nombres y Eslóganes', description: 'Crea nombres de marca y eslóganes creativos que impacten.', icon: FileText, category: 'Copywriting', color: 'bg-blue-50 text-blue-600' },
+  { slug: 'product-description', title: 'Descripción de Producto', description: 'Copy persuasivo que resalta los beneficios de tus productos.', icon: ShoppingBag, category: 'Copywriting', color: 'bg-emerald-50 text-emerald-600' },
+  { slug: 'amazon-product', title: 'Amazon Product', description: 'Listados optimizados para el algoritmo A9 de Amazon.', icon: ShoppingCart, category: 'Amazon', color: 'bg-orange-50 text-orange-600' },
+  { slug: 'ads-generator', title: 'Generador de Anuncios', description: 'Crea copys de anuncios efectivos para Facebook y Google.', icon: Megaphone, category: 'Copywriting', color: 'bg-sky-50 text-sky-600' },
+  { slug: 'seo-brief', title: 'Estructura SEO', description: 'Define la arquitectura de contenido para dominar Google.', icon: Search, category: 'SEO', color: 'bg-violet-50 text-violet-600' },
+  { slug: 'blog-toolkit', title: 'Creador de Artículos', description: 'Escribe posts completos y optimizados en segundos.', icon: PenTool, category: 'SEO', color: 'bg-purple-50 text-purple-600' },
+  { slug: 'framework-pas', title: 'Framework PAS', description: 'Copy basado en Problema, Agitación y Solución.', icon: MessageSquare, category: 'Copywriting', color: 'bg-pink-50 text-pink-600' },
+  { slug: 'cta-generator', title: 'Llamadas a la Acción', description: 'Crea CTAs irresistibles que aumenten tu conversión.', icon: MousePointer2, category: 'Copywriting', color: 'bg-cyan-50 text-cyan-600' },
+  { slug: 'youtube-script', title: 'Guiones YouTube', description: 'Guiones estructurados para maximizar la retención.', icon: Video, category: 'YouTube', color: 'bg-red-50 text-red-600' },
+  { slug: 'youtube-seo', title: 'YouTube Growth', description: 'Optimiza tus títulos y etiquetas para crecer en YouTube.', icon: Play, category: 'YouTube', color: 'bg-red-50 text-red-600' },
 ];
 
 export default function LandingPage() {
@@ -92,33 +96,46 @@ export default function LandingPage() {
         </section>
 
         {/* ORIGINAL TOOLS GRID RESTORED TO TOP */}
-        <section className="w-full py-8 md:py-16 lg:py-24 bg-muted/20 border-y backdrop-blur-sm" id="tools">
+        <section className="w-full py-20 bg-[#F9FAFB] border-y" id="tools">
           <div className="container px-4 md:px-6 mx-auto">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-10">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-16">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Nuestras Herramientas IA</h2>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Prueba cualquiera de nuestras herramientas directamente. ¡Empieza a generar contenido ahora mismo!
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-slate-900">
+                  Nuestras Herramientas IA
+                </h2>
+                <p className="max-w-[800px] text-slate-500 md:text-xl/relaxed">
+                  Prueba la potencia de nuestros agentes especializados. Empieza a generar contenido que convierte en segundos.
                 </p>
               </div>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {tools.map((tool) => (
-                <Card key={tool.slug} className="flex flex-col hover:shadow-md transition-shadow border-none shadow-sm bg-card/60 backdrop-blur-sm hover:-translate-y-1 duration-200">
-                  <CardHeader>
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                      <tool.icon size={20} />
-                    </div>
-                    <CardTitle>{tool.title}</CardTitle>
-                    <CardDescription>{tool.description}</CardDescription>
-                  </CardHeader>
-                  <CardFooter className="mt-auto">
-                    <Button asChild className="w-full" variant="default">
-                      <Link href={`/tools/${tool.slug}`}>Usar Herramienta</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {tools.slice(0, 8).map((tool) => (
+                <Link 
+                  key={tool.slug} 
+                  href={`/tools/${tool.slug}`}
+                  className="group flex flex-col h-full bg-white border border-slate-200/60 rounded-2xl p-5 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300 cursor-pointer"
+                >
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 ${tool.color}`}>
+                    <tool.icon size={22} strokeWidth={2} />
+                  </div>
+                  <h3 className="text-base font-semibold text-slate-900 mb-1.5 group-hover:text-primary transition-colors">
+                    {tool.title}
+                  </h3>
+                  <p className="text-sm text-slate-500 leading-relaxed line-clamp-2">
+                    {tool.description}
+                  </p>
+                  <div className="mt-4 flex items-center text-xs font-medium text-primary opacity-0 translate-x-[-10px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                    Probar ahora <ArrowRight size={14} className="ml-1" />
+                  </div>
+                </Link>
               ))}
+            </div>
+
+            <div className="mt-12 text-center">
+              <Button asChild size="lg" variant="outline" className="rounded-full px-8 border-slate-200 hover:bg-slate-50">
+                <Link href="/tools">Ver todas las herramientas ({tools.length})</Link>
+              </Button>
             </div>
           </div>
         </section>

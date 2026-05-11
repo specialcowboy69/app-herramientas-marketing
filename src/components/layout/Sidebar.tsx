@@ -11,7 +11,8 @@ import {
   LogOut,
   PlusCircle,
   ChevronRight,
-  Mic
+  Mic,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth } from '@/lib/firebase/client';
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Proyectos', href: '/projects', icon: Briefcase },
   { name: 'Herramientas', href: '/tools', icon: Wand2 },
   { name: 'Favoritos', href: '/favorites', icon: Star },
+  { name: 'Historial', href: '/history', icon: Clock },
   { name: 'Configuración', href: '/settings', icon: Settings },
 ];
 
