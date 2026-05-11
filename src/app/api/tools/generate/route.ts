@@ -42,22 +42,23 @@ export async function POST(req: NextRequest) {
 
     const userData = userDoc.data() || {};
     const isPremium = userData.subscriptionStatus === 'active';
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
     
-    if (!isPremium) {
-      const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
-      let { dailyGenerationsCount = 0, lastGenerationDate = '' } = userData;
+    let { dailyGenerationsCount = 0, lastGenerationDate = '' } = userData;
 
-      if (lastGenerationDate !== today) {
-        dailyGenerationsCount = 0;
-      }
+    // Resetear el contador si es un nuevo día
+    if (lastGenerationDate !== today) {
+      dailyGenerationsCount = 0;
+    }
 
-      if (dailyGenerationsCount >= 5) {
-        return NextResponse.json({ error: 'Has alcanzado el límite de 5 usos gratuitos diarios. Suscríbete para acceso ilimitado.' }, { status: 403 });
-      }
+    // Límite de seguridad: 1000 para Premium (anti-bots), 5 para Free
+    const MAX_DAILY_LIMIT = isPremium ? 1000 : 5;
 
-      // We will increment the count after successful generation, wait, actually let's do it after generateJSON finishes
-      userData.dailyGenerationsCount = dailyGenerationsCount;
-      userData.lastGenerationDate = today;
+    if (dailyGenerationsCount >= MAX_DAILY_LIMIT) {
+      const errorMessage = isPremium 
+        ? 'Límite de seguridad diario alcanzado. Contacta con soporte si necesitas más volumen.'
+        : 'Has alcanzado el límite de 5 usos gratuitos diarios. Suscríbete para acceso ilimitado.';
+      return NextResponse.json({ error: errorMessage }, { status: 403 });
     }
 
     let projectContext = null;
@@ -181,13 +182,11 @@ export async function POST(req: NextRequest) {
         });
       generationId = genRef.id;
 
-      // Update free user limits
-      if (!isPremium) {
-        await userDocRef.update({
-          dailyGenerationsCount: userData.dailyGenerationsCount + 1,
-          lastGenerationDate: userData.lastGenerationDate
-        });
-      }
+      // Actualizar contadores para TODOS los usuarios (Free y Premium)
+      await userDocRef.update({
+        dailyGenerationsCount: dailyGenerationsCount + 1,
+        lastGenerationDate: today
+      });
 
       // NEW: Update AI Knowledge in the specific product if productId is present
       if (productId) {
