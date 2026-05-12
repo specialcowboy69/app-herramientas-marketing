@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { sanitizeInput } from '@/lib/security/sanitize';
 
