@@ -161,17 +161,6 @@ export async function POST(req: NextRequest) {
           lastGenerationDate: today
         });
 
-        // Update AI Knowledge if applicable
-        if (productId) {
-          let updateField = '';
-          if (toolSlug === 'customer-avatar') updateField = `products.${productId}.aiKnowledge.lastAvatar`;
-          else if (toolSlug === 'pain-points') updateField = `products.${productId}.aiKnowledge.painPoints`;
-          else if (toolSlug === 'business-idea') updateField = `products.${productId}.aiKnowledge.businessModel`;
-
-          if (updateField) {
-            await adminDb.collection('projects').doc(projectId).update({ [updateField]: output });
-          }
-        }
       } catch (error: any) {
         console.error('[BACKGROUND ERROR]:', error);
         await genRef.update({

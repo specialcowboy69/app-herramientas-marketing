@@ -242,6 +242,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
     } catch (error) {
       toast.error('Error al guardar favorito');
     }
+
+    // Aprendizaje voluntario
+    if (result) triggerAILearning(result);
   };
 
   const saveAsDocument = async (title: string, content: string) => {
@@ -264,11 +267,34 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
     } catch (error: any) {
       toast.error('Error al guardar: ' + error.message);
     }
+
+    // Aprendizaje voluntario
+    if (result) triggerAILearning(result);
+  };
+
+  const triggerAILearning = async (contentToLearn: any) => {
+    if (!selectedProjectId || !selectedProductId) return;
+    // Solo aprendemos de las herramientas base estratégicas
+    if (!['customer-avatar', 'pain-points', 'business-idea'].includes(toolSlug)) return;
+
+    try {
+      const { auth } = await import('@/lib/firebase/client');
+      const token = await auth.currentUser?.getIdToken();
+      await fetch('/api/ai/learn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ projectId: selectedProjectId, productId: selectedProductId, toolSlug, content: contentToLearn })
+      });
+    } catch (error) {
+      console.error("Error guardando en memoria de IA:", error);
+    }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado al portapapeles');
+    // Aprendizaje voluntario
+    if (result) triggerAILearning(result);
   };
 
   return (
