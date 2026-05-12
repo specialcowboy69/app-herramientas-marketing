@@ -493,19 +493,28 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                 )}
 
                 {toolSlug === 'amazon-product' && result && (
-                  <Button onClick={() => router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Promocionar este producto de Amazon...`)}`)} className="rounded-xl h-11 px-6 group">
+                  <Button onClick={() => {
+                    const contextData = typeof result === 'string' ? result : JSON.stringify(result);
+                    router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Vender este producto de Amazon. Aquí tienes la descripción y viñetas base: ${contextData.substring(0, 400)}`)}`);
+                  }} className="rounded-xl h-11 px-6 group">
                     Crear Anuncios del Producto <Zap className="ml-2 h-4 w-4 text-yellow-500" />
                   </Button>
                 )}
 
                 {toolSlug === 'framework-pas' && result && (
-                  <Button onClick={() => router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Hacer anuncio basado en este dolor: ${JSON.stringify(result).substring(0, 50)}...`)}`)} className="rounded-xl h-11 px-6 group">
+                  <Button onClick={() => {
+                    const contextData = typeof result === 'string' ? result : JSON.stringify(result);
+                    router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Crea un anuncio basado en esta estructura de Problema-Agitación-Solución: ${contextData.substring(0, 400)}`)}`);
+                  }} className="rounded-xl h-11 px-6 group">
                     Convertir en Anuncio <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1" />
                   </Button>
                 )}
 
                 {toolSlug === 'youtube-script' && result && (
-                  <Button onClick={() => router.push(`/tools/youtube-seo?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Optimizar video sobre este guión...`)}`)} className="rounded-xl h-11 px-6 group">
+                  <Button onClick={() => {
+                    const contextData = typeof result === 'string' ? result : JSON.stringify(result);
+                    router.push(`/tools/youtube-seo?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Optimizar título, descripción y etiquetas SEO para este guión de video: ${contextData.substring(0, 400)}`)}`);
+                  }} className="rounded-xl h-11 px-6 group">
                     Optimizar SEO del Video <Search className="ml-2 h-4 w-4" />
                   </Button>
                 )}
@@ -523,7 +532,11 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                 )}
 
                 {toolSlug === 'ads-generator' && result && (
-                  <Button onClick={() => router.push(`/tools/cta-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Crear llamados a la acción para este anuncio...`)}`)} className="rounded-xl h-11 px-6 group">
+                  <Button onClick={() => {
+                    // Si es JSON con headlines (v2), los usamos. Si no, extraemos un string seguro.
+                    const adsContext = result.headlines ? result.headlines.join(', ') : (typeof result === 'string' ? result.substring(0, 300) : JSON.stringify(result).substring(0, 300));
+                    router.push(`/tools/cta-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Crear botones y llamados a la acción (CTAs) de alta conversión para estos titulares de anuncio: ${adsContext}`)}`);
+                  }} className="rounded-xl h-11 px-6 group">
                     Crear CTAs para el anuncio <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1" />
                   </Button>
                 )}
