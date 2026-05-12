@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,8 @@ export default function SignupPage() {
         updatedAt: serverTimestamp(),
       });
 
-      toast.success('Cuenta creada correctamente');
+      await sendEmailVerification(user);
+      toast.success('Cuenta creada. Por favor, revisa tu bandeja de entrada para verificar tu correo.');
       router.push('/dashboard');
     } catch (error: any) {
       toast.error('Error al registrarse: ' + error.message);

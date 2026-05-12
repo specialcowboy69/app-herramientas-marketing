@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { auth } from '@/lib/firebase/client';
-import { Loader2, Sparkles, Copy, Star, Plus, ArrowRight, Zap, Package, ChevronRight, BarChart3 } from 'lucide-react';
+import { Loader2, Sparkles, Copy, Star, Plus, ArrowRight, Zap, Package, Search, RefreshCw, Minimize2, ChevronRight, BarChart3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -48,6 +48,50 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
   const [result, setResult] = useState<any>(null);
   const [lastGenerationId, setLastGenerationId] = useState<string | null>(null);
   const [favoritedItems, setFavoritedItems] = useState<Set<string>>(new Set());
+  const [isTransforming, setIsTransforming] = useState(false);
+
+  const handleRegenerate = () => {
+    handleGenerate({ preventDefault: () => {} } as React.FormEvent);
+  };
+
+  const handleSummarize = async (textToSummarize: string, fieldKey: string, index?: number, subField?: string) => {
+    if (!textToSummarize) return;
+    setIsTransforming(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/ai/transform', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ text: textToSummarize, action: 'summarize' }),
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      setResult((prev: any) => {
+        const newResult = { ...prev };
+        if (index !== undefined && subField) {
+          const arr = [...(newResult[fieldKey] || [])];
+          arr[index] = { ...arr[index], [subField]: data.result };
+          newResult[fieldKey] = arr;
+        } else if (index !== undefined) {
+          const arr = [...(newResult[fieldKey] || [])];
+          arr[index] = data.result;
+          newResult[fieldKey] = arr;
+        } else {
+          newResult[fieldKey] = data.result;
+        }
+        return newResult;
+      });
+      toast.success('Texto resumido con éxito');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsTransforming(false);
+    }
+  };
 
   // Tool Chaining: Pre-fill context if exists in URL
   useEffect(() => {
@@ -107,7 +151,8 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
     }
 
     setGenerating(true);
-    // ... remaining generate code
+    setResult(null);
+    
     try {
       const idToken = user ? await auth.currentUser?.getIdToken() : undefined;
       const headers: Record<string, string> = {
@@ -129,13 +174,43 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       
-      setResult(data.output);
-      setLastGenerationId(data.generationId);
-      setFavoritedItems(new Set());
-      toast.success('Contenido generado con éxito');
+      const { jobId } = data;
+      if (!jobId) throw new Error("No se recibió el ID del trabajo.");
+
+      // Setup real-time listener for the generation status
+      const { doc, onSnapshot } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase/client');
+
+      const unsubscribe = onSnapshot(doc(db, 'generations', jobId), (docSnap) => {
+        if (docSnap.exists()) {
+          const genData = docSnap.data();
+          
+          if (genData.status === 'completed') {
+            setResult(genData.outputPayload);
+            setLastGenerationId(jobId);
+            setFavoritedItems(new Set());
+            setGenerating(false);
+            toast.success('Contenido generado con éxito');
+            unsubscribe();
+          } else if (genData.status === 'error') {
+            setGenerating(false);
+            toast.error('Error en la generación: ' + (genData.error || 'Error desconocido'));
+            unsubscribe();
+          }
+        }
+      });
+
+      // Timeout safety for the listener (2 minutes)
+      setTimeout(() => {
+        unsubscribe();
+        if (generating) {
+          setGenerating(false);
+          toast.error('La generación está tardando demasiado. Por favor revisa tu historial más tarde.');
+        }
+      }, 120000);
+
     } catch (error: any) {
-      toast.error('Error al generar: ' + error.message);
-    } finally {
+      toast.error('Error al iniciar: ' + error.message);
       setGenerating(false);
     }
   };
@@ -346,67 +421,115 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
 
               <div className="flex flex-wrap gap-3">
                 {toolSlug === 'business-idea' && result.ideas?.[0] && (
-                  <Button 
-                    onClick={() => {
-                      const context = `Idea: ${result.ideas[0].title}. Resumen: ${result.ideas[0].summary}`;
-                      router.push(`/tools/customer-avatar?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
-                    }}
-                    className="rounded-xl h-11 px-6 group"
-                  >
-                    Crear Avatar de Cliente <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
+                  <>
+                    <Button onClick={() => router.push(`/tools/customer-avatar?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Idea: ${result.ideas[0].title}. Resumen: ${result.ideas[0].summary}`)}`)} className="rounded-xl h-11 px-6 group">
+                      Crear Avatar de Cliente <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/naming-slogan?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Idea: ${result.ideas[0].summary}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Crear Nombre y Slogan <Sparkles className="ml-2 h-4 w-4" />
+                    </Button>
+                  </>
                 )}
 
                 {toolSlug === 'customer-avatar' && result && (
-                  <Button 
-                    onClick={() => {
-                      const context = `Avatar: ${result.avatarName}. Deseos: ${result.desires}. Frustraciones: ${result.frustrations}`;
-                      router.push(`/tools/pain-points?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
-                    }}
-                    className="rounded-xl h-11 px-6 group"
-                  >
-                    Descubrir Puntos de Dolor <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
+                  <>
+                    <Button onClick={() => router.push(`/tools/pain-points?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Avatar: ${result.avatarName}. Deseos: ${result.desires}. Frustraciones: ${result.frustrations}`)}`)} className="rounded-xl h-11 px-6 group">
+                      Descubrir Puntos de Dolor <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/framework-pas?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Avatar: ${result.avatarName} con problemas de ${result.frustrations}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Aplicar Framework PAS <Zap className="ml-2 h-4 w-4 text-yellow-500" />
+                    </Button>
+                  </>
                 )}
 
                 {toolSlug === 'pain-points' && result.painPoints && (
                   <>
-                    <Button 
-                      onClick={() => {
-                        const context = `Puntos de dolor identificados: ${result.painPoints.map((p: any) => p.painPoint).join(', ')}`;
-                        router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
-                      }}
-                      className="rounded-xl h-11 px-6 group"
-                    >
+                    <Button onClick={() => router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Resolver estos problemas: ${result.painPoints.map((p: any) => p.painPoint).join(', ')}`)}`)} className="rounded-xl h-11 px-6 group">
                       Redactar Anuncios <Zap className="ml-2 h-4 w-4 text-yellow-400" />
                     </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        const context = `Resolver estos problemas: ${result.painPoints.map((p: any) => p.painPoint).join(', ')}`;
-                        router.push(`/tools/product-description?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
-                      }}
-                      className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5"
-                    >
-                      Crear Descripción de Producto <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    <Button variant="outline" onClick={() => router.push(`/tools/product-description?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Dolores a resolver: ${result.painPoints.map((p: any) => p.painPoint).join(', ')}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Describir Producto <Package className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/youtube-script?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Hacer video sobre este dolor: ${result.painPoints[0]?.painPoint}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Guión de YouTube <Sparkles className="ml-2 h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                {toolSlug === 'product-description' && result && (
+                  <>
+                    <Button onClick={() => router.push(`/tools/amazon-product?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Descripción base: ${result.shortDescription}. Beneficios: ${result.primaryBenefits?.join(', ')}`)}`)} className="rounded-xl h-11 px-6 group">
+                      Adaptar para Amazon <Package className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Vender con estos beneficios: ${result.primaryBenefits?.join(', ')}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Crear Anuncios <Zap className="ml-2 h-4 w-4 text-yellow-500" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/seo-brief?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Posicionar producto: ${result.shortDescription}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Estructura SEO <Search className="ml-2 h-4 w-4" />
                     </Button>
                   </>
                 )}
 
                 {toolSlug === 'seo-brief' && result && (
-                  <Button 
-                    onClick={() => {
-                      const context = `Brief SEO: ${result.intentSummary}. Estructura: ${result.outline?.join(', ')}`;
-                      router.push(`/tools/blog-toolkit?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(context)}`);
-                    }}
-                    className="rounded-xl h-11 px-6 group"
-                  >
-                    Redactar Artículo de Blog <Sparkles className="ml-2 h-4 w-4" />
+                  <>
+                    <Button onClick={() => router.push(`/tools/blog-toolkit?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Brief SEO: ${result.intentSummary}. Estructura: ${result.outline?.join(', ')}`)}`)} className="rounded-xl h-11 px-6 group">
+                      Redactar Artículo de Blog <Sparkles className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/youtube-seo?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Tema a posicionar en YouTube: ${result.intentSummary}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      SEO para YouTube <Search className="ml-2 h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                {toolSlug === 'blog-toolkit' && result && (
+                  <>
+                    <Button onClick={() => router.push(`/tools/youtube-script?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Convertir este artículo en video: ${result.titles?.[0]}. Intro: ${result.intro}`)}`)} className="rounded-xl h-11 px-6 group">
+                      Adaptar a Guión de Video <Sparkles className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push(`/tools/cta-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Tema del artículo para el CTA: ${result.titles?.[0]}`)}`)} className="rounded-xl h-11 px-6 group border-primary/20 hover:bg-primary/5">
+                      Generar CTAs <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                {toolSlug === 'amazon-product' && result && (
+                  <Button onClick={() => router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Promocionar este producto de Amazon...`)}`)} className="rounded-xl h-11 px-6 group">
+                    Crear Anuncios del Producto <Zap className="ml-2 h-4 w-4 text-yellow-500" />
                   </Button>
                 )}
 
-                {/* Default back button if no specific chain is defined */}
-                <Button variant="ghost" onClick={() => router.push('/tools')} className="rounded-xl h-11">
+                {toolSlug === 'framework-pas' && result && (
+                  <Button onClick={() => router.push(`/tools/ads-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Hacer anuncio basado en este dolor: ${JSON.stringify(result).substring(0, 50)}...`)}`)} className="rounded-xl h-11 px-6 group">
+                    Convertir en Anuncio <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1" />
+                  </Button>
+                )}
+
+                {toolSlug === 'youtube-script' && result && (
+                  <Button onClick={() => router.push(`/tools/youtube-seo?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Optimizar video sobre este guión...`)}`)} className="rounded-xl h-11 px-6 group">
+                    Optimizar SEO del Video <Search className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+
+                {toolSlug === 'youtube-seo' && result && (
+                  <Button onClick={() => router.push(`/tools/youtube-script?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Títulos propuestos: ${result.seoTitles?.join(', ') || 'Video optimizado'}`)}`)} className="rounded-xl h-11 px-6 group">
+                    Escribir Guión Completo <Sparkles className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+
+                {toolSlug === 'naming-slogan' && result.options?.[0] && (
+                  <Button onClick={() => router.push(`/tools/customer-avatar?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Marca: ${result.options[0].brandName}. Slogan: ${result.options[0].slogan}`)}`)} className="rounded-xl h-11 px-6 group">
+                    Definir Avatar de Cliente <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1" />
+                  </Button>
+                )}
+
+                {toolSlug === 'ads-generator' && result && (
+                  <Button onClick={() => router.push(`/tools/cta-generator?projectId=${selectedProjectId}&inheritedContext=${encodeURIComponent(`Crear llamados a la acción para este anuncio...`)}`)} className="rounded-xl h-11 px-6 group">
+                    Crear CTAs para el anuncio <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1" />
+                  </Button>
+                )}
+
+                {/* Botón Volver por defecto si no hay encadenamiento */}
+                <Button variant="ghost" onClick={() => router.push('/tools')} className="rounded-xl h-11 ml-auto">
                   Ver todas las herramientas
                 </Button>
               </div>
@@ -422,13 +545,38 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
               <p>Completa el formulario para generar contenido.</p>
             </div>
           ) : generating ? (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader>
-                <CardContent className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-4/6" />
+            <div className="space-y-6 animate-pulse">
+              <div className="p-8 rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/5 via-transparent to-transparent backdrop-blur-sm relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 animate-bounce flex items-center justify-center">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-48 bg-primary/10" />
+                    <Skeleton className="h-3 w-32 opacity-50" />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-full rounded-full" />
+                  <Skeleton className="h-4 w-[92%] rounded-full" />
+                  <Skeleton className="h-4 w-[85%] rounded-full" />
+                  <div className="pt-4 flex gap-3">
+                    <Skeleton className="h-10 w-24 rounded-xl" />
+                    <Skeleton className="h-10 w-24 rounded-xl" />
+                  </div>
+                </div>
+              </div>
+
+              <Card className="border-dashed border-primary/20 bg-muted/5">
+                <CardContent className="py-10 flex flex-col items-center text-center space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary opacity-50" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-sm">Nuestra IA está procesando tu solicitud</p>
+                    <p className="text-xs text-muted-foreground">Analizando contexto y optimizando conversión...</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -449,6 +597,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   onFavorite={() => saveAsFavorite(idea, `idea-${i}`)}
                   isFavorited={favoritedItems.has(`idea-${i}`)}
                   onSave={() => saveAsDocument(idea.title, idea.summary)}
+                  onRegenerate={handleRegenerate}
+                  onSummarize={() => handleSummarize(idea.summary, 'ideas', i, 'summary')}
+                  isTransforming={isTransforming}
                 />
               ))}
               
@@ -466,6 +617,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   onFavorite={() => saveAsFavorite(result, 'avatar')}
                   isFavorited={favoritedItems.has('avatar')}
                   onSave={() => saveAsDocument(result.avatarName, result.goals)}
+                  onRegenerate={handleRegenerate}
+                  onSummarize={() => handleSummarize(result.goals, 'goals')}
+                  isTransforming={isTransforming}
                 />
               )}
 
@@ -478,6 +632,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     onFavorite={() => saveAsFavorite({ description: result.shortDescription }, 'desc-short')}
                     isFavorited={favoritedItems.has('desc-short')}
                     onSave={() => saveAsDocument(`${result.productName} - Short`, result.shortDescription)}
+                    onRegenerate={handleRegenerate}
+                    onSummarize={() => handleSummarize(result.shortDescription, 'shortDescription')}
+                    isTransforming={isTransforming}
                   />
                   <ResultCard 
                     title="Descripción Larga" 
@@ -486,6 +643,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     onFavorite={() => saveAsFavorite({ description: result.longDescription }, 'desc-long')}
                     isFavorited={favoritedItems.has('desc-long')}
                     onSave={() => saveAsDocument(`${result.productName} - Long`, result.longDescription)}
+                    onRegenerate={handleRegenerate}
+                    onSummarize={() => handleSummarize(result.longDescription, 'longDescription')}
+                    isTransforming={isTransforming}
                   />
                   <ResultCard 
                     title="Beneficios" 
@@ -494,6 +654,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     onFavorite={() => saveAsFavorite({ benefits: result.primaryBenefits }, 'desc-benefits')}
                     isFavorited={favoritedItems.has('desc-benefits')}
                     onSave={() => saveAsDocument(`${result.productName} - Benefits`, result.primaryBenefits?.join('\n'))}
+                    onRegenerate={handleRegenerate}
                   />
                   {result.copywriterNote && (
                     <ResultCard 
@@ -502,6 +663,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onCopy={() => copyToClipboard(result.copywriterNote)} 
                       onFavorite={() => saveAsFavorite({ note: result.copywriterNote }, 'desc-note')}
                       isFavorited={favoritedItems.has('desc-note')}
+                      onRegenerate={handleRegenerate}
+                      onSummarize={() => handleSummarize(result.copywriterNote, 'copywriterNote')}
+                      isTransforming={isTransforming}
                     />
                   )}
                 </div>
@@ -521,6 +685,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   onFavorite={() => saveAsFavorite(pp, `pp-${i}`)}
                   isFavorited={favoritedItems.has(`pp-${i}`)}
                   onSave={() => saveAsDocument(pp.painPoint, pp.emotionalImpact)}
+                  onRegenerate={handleRegenerate}
+                  onSummarize={() => handleSummarize(pp.emotionalImpact, 'painPoints', i, 'emotionalImpact')}
+                  isTransforming={isTransforming}
                 />
               ))}
 
@@ -537,6 +704,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                   onFavorite={() => saveAsFavorite(opt, `opt-${i}`)}
                   isFavorited={favoritedItems.has(`opt-${i}`)}
                   onSave={() => saveAsDocument(opt.brandName, opt.slogan)}
+                  onRegenerate={handleRegenerate}
                 />
               ))}
 
@@ -551,6 +719,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ headline: h }, `headline-${i}`)}
                       isFavorited={favoritedItems.has(`headline-${i}`)}
                       onSave={() => saveAsDocument(`Ad Headline ${i+1}`, h)}
+                      onRegenerate={handleRegenerate}
                     />
                   ))}
                   {result.bodyVariants?.map((b: string, i: number) => (
@@ -562,6 +731,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ body: b }, `body-${i}`)}
                       isFavorited={favoritedItems.has(`body-${i}`)}
                       onSave={() => saveAsDocument(`Ad Body ${i+1}`, b)}
+                      onRegenerate={handleRegenerate}
+                      onSummarize={() => handleSummarize(b, 'bodyVariants', i)}
+                      isTransforming={isTransforming}
                     />
                   ))}
                   {result.copywriterNote && (
@@ -571,6 +743,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onCopy={() => copyToClipboard(result.copywriterNote)} 
                       onFavorite={() => saveAsFavorite({ note: result.copywriterNote }, 'ad-note')}
                       isFavorited={favoritedItems.has('ad-note')}
+                      onRegenerate={handleRegenerate}
+                      onSummarize={() => handleSummarize(result.copywriterNote, 'copywriterNote')}
+                      isTransforming={isTransforming}
                     />
                   )}
                 </div>
@@ -589,6 +764,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     onFavorite={() => saveAsFavorite({ intentSummary: result.intentSummary, seoTitles: result.seoTitles }, 'seo-brief-summary')}
                     isFavorited={favoritedItems.has('seo-brief-summary')}
                     onSave={() => saveAsDocument('Resumen SEO', result.intentSummary)}
+                    onRegenerate={handleRegenerate}
+                    onSummarize={() => handleSummarize(result.intentSummary, 'intentSummary')}
+                    isTransforming={isTransforming}
                   />
                   
                   {result.semanticEntities?.length > 0 && (
@@ -599,6 +777,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ entities: result.semanticEntities, eeat: result.eeatRecommendation }, 'seo-brief-entities')}
                       isFavorited={favoritedItems.has('seo-brief-entities')}
                       onSave={() => saveAsDocument('Entity SEO y EEAT', `Entidades: ${result.semanticEntities?.join(', ')}\n\n${result.eeatRecommendation}`)}
+                      onRegenerate={handleRegenerate}
                     />
                   )}
                   
@@ -610,6 +789,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ metaDescriptions: result.metaDescriptions }, 'seo-brief-meta')}
                       isFavorited={favoritedItems.has('seo-brief-meta')}
                       onSave={() => saveAsDocument('Meta Descripciones', result.metaDescriptions.map((desc: string, i: number) => `${i + 1}. ${desc}`).join('\n'))}
+                      onRegenerate={handleRegenerate}
                     />
                   )}
 
@@ -621,6 +801,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ outline: result.outline }, 'seo-brief-outline')}
                       isFavorited={favoritedItems.has('seo-brief-outline')}
                       onSave={() => saveAsDocument('Estructura SEO', result.outline.join('\n'))}
+                      onRegenerate={handleRegenerate}
                     />
                   )}
 
@@ -641,6 +822,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                         ...(result.relatedQuestions ? ['PREGUNTAS FRECUENTES (FAQS):', ...result.relatedQuestions, ''] : []),
                         ...(result.internalLinkIdeas ? ['IDEAS DE ENLACES INTERNOS:', ...result.internalLinkIdeas] : [])
                       ].join('\n'))}
+                      onRegenerate={handleRegenerate}
                     />
                   )}
                 </div>
@@ -655,6 +837,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     onFavorite={() => saveAsFavorite({ intro: result.intro, titles: result.titles }, 'blog-intro')}
                     isFavorited={favoritedItems.has('blog-intro')}
                     onSave={() => saveAsDocument(result.titles?.[0], result.intro)}
+                    onRegenerate={handleRegenerate}
+                    onSummarize={() => handleSummarize(result.intro, 'intro')}
+                    isTransforming={isTransforming}
                   />
                   <ResultCard 
                     title="Borrador Completo" 
@@ -664,12 +849,18 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                     onFavorite={() => saveAsFavorite({ draft: result.fullDraft }, 'blog-draft')}
                     isFavorited={favoritedItems.has('blog-draft')}
                     onSave={() => saveAsDocument(`${result.titles?.[0]} (Draft)`, result.fullDraft)}
+                    onRegenerate={handleRegenerate}
+                    onSummarize={() => handleSummarize(result.fullDraft, 'fullDraft')}
+                    isTransforming={isTransforming}
                   />
                   {result.seoNote && (
                     <ResultCard 
                       title="Estrategia de Posicionamiento" 
                       content={result.seoNote}
                       onCopy={() => copyToClipboard(result.seoNote)}
+                      onRegenerate={handleRegenerate}
+                      onSummarize={() => handleSummarize(result.seoNote, 'seoNote')}
+                      isTransforming={isTransforming}
                     />
                   )}
                 </div>
@@ -686,6 +877,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ cta: c }, `cta-direct-${i}`)}
                       isFavorited={favoritedItems.has(`cta-direct-${i}`)}
                       onSave={() => saveAsDocument('CTA Directo', c)}
+                      onRegenerate={handleRegenerate}
                     />
                   ))}
                   {result.softCtas?.map((c: string, i: number) => (
@@ -697,6 +889,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ cta: c }, `cta-soft-${i}`)}
                       isFavorited={favoritedItems.has(`cta-soft-${i}`)}
                       onSave={() => saveAsDocument('CTA Suave', c)}
+                      onRegenerate={handleRegenerate}
                     />
                   ))}
                   {result.emotionalCtas?.map((c: string, i: number) => (
@@ -708,6 +901,7 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       onFavorite={() => saveAsFavorite({ cta: c }, `cta-emotional-${i}`)}
                       isFavorited={favoritedItems.has(`cta-emotional-${i}`)}
                       onSave={() => saveAsDocument('CTA Emocional', c)}
+                      onRegenerate={handleRegenerate}
                     />
                   ))}
                   {result.copywriterNote && (
@@ -715,6 +909,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                       title="Estrategia CRO" 
                       content={result.copywriterNote}
                       onCopy={() => copyToClipboard(result.copywriterNote)}
+                      onRegenerate={handleRegenerate}
+                      onSummarize={() => handleSummarize(result.copywriterNote, 'copywriterNote')}
+                      isTransforming={isTransforming}
                     />
                   )}
                 </div>
@@ -738,6 +935,9 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
                         onFavorite={() => saveAsFavorite({ [key]: value }, `${toolSlug}-${key}-${i}`)}
                         isFavorited={favoritedItems.has(`${toolSlug}-${key}-${i}`)}
                         onSave={() => saveAsDocument(`${title}`, content)}
+                        onRegenerate={handleRegenerate}
+                        onSummarize={typeof value === 'string' ? () => handleSummarize(value, key) : undefined}
+                        isTransforming={isTransforming}
                       />
                     );
                   })}
@@ -760,6 +960,9 @@ function ResultCard({
   onFavorite, 
   isFavorited,
   onSave,
+  onRegenerate,
+  onSummarize,
+  isTransforming = false,
   isMarkdown = false
 }: { 
   title: string, 
@@ -769,10 +972,13 @@ function ResultCard({
   onFavorite?: () => void,
   isFavorited?: boolean,
   onSave?: () => void,
+  onRegenerate?: () => void,
+  onSummarize?: () => void,
+  isTransforming?: boolean,
   isMarkdown?: boolean
 }) {
   return (
-    <Card className="shadow-sm border-none bg-card">
+    <Card className="shadow-sm border-none bg-card overflow-hidden rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg font-bold">{title}</CardTitle>
         <div className="flex gap-1">
@@ -802,6 +1008,23 @@ function ResultCard({
           </div>
         )}
       </CardContent>
+      <CardFooter className="flex gap-2 border-t pt-4 bg-muted/20">
+        <Button variant="ghost" size="sm" onClick={onRegenerate} className="rounded-lg h-9 hover:bg-primary/10 hover:text-primary">
+          <RefreshCw className="h-4 w-4 mr-2" /> Regenerar
+        </Button>
+        {content && content.length > 150 && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onSummarize} 
+            disabled={isTransforming}
+            className="rounded-lg h-9 hover:bg-primary/10 hover:text-primary"
+          >
+            <Minimize2 className="h-4 w-4 mr-2" />
+            {isTransforming ? 'Resumiendo...' : 'Resumir'}
+          </Button>
+        )}
+      </CardFooter>
     </Card>
   );
 }

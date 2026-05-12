@@ -28,7 +28,7 @@ export default function PainPointsPage() {
         { name: 'targetCustomer', label: 'Cliente Objetivo', type: 'text', placeholder: '¿A quién investigamos?' },
       ]}
       extraContent={
-        <div className="border-t bg-background mt-12 pt-12 -mx-8 px-8 rounded-b-3xl">
+        <div key="seo-content" className="border-t bg-background mt-12 pt-12 -mx-8 px-8 rounded-b-3xl">
           <ToolSEOContent 
             data={painPointsSEO} 
             toolName="Puntos de Dolor"

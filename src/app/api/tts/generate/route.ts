@@ -38,7 +38,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     const idToken = authHeader.split('Bearer ')[1];
-    await adminAuth.verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const userId = decodedToken.uid;
+
+    if (!decodedToken.email_verified && process.env.NODE_ENV !== 'development') {
+      return NextResponse.json({ error: 'Debes verificar tu correo electrónico para usar TTS.' }, { status: 403 });
+    }
 
     const { text: rawText, voiceName, speakingRate, pitch } = await req.json();
 
@@ -51,37 +56,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `El texto no puede superar los ${MAX_CHARS} caracteres.` }, { status: 400 });
     }
 
-    // Validate voice name against allowlist
-    const voice = VALID_VOICES.has(voiceName) ? voiceName : 'es-ES-Neural2-A';
-
-    // Validate numeric params
-    const rate = Math.min(Math.max(parseFloat(speakingRate) || 1.0, 0.25), 4.0);
-    const pitchVal = Math.min(Math.max(parseFloat(pitch) || 0.0, -20.0), 20.0);
-
-    // Extract language code from voice name (e.g. 'es-ES' from 'es-ES-Neural2-A')
-    const languageCode = voice.split('-').slice(0, 2).join('-');
-
-    const [response] = await ttsClient.synthesizeSpeech({
-      input: { text },
-      voice: {
-        languageCode,
-        name: voice,
-      },
-      audioConfig: {
-        audioEncoding: 'MP3',
-        speakingRate: rate,
-        pitch: pitchVal,
-      },
+    // 1. Create the generation document
+    const genRef = await adminDb.collection('generations').add({
+      userId,
+      toolSlug: 'tts-generator',
+      inputPayload: { text, voiceName, speakingRate, pitch },
+      status: 'processing',
+      createdAt: new Date(),
     });
+    const jobId = genRef.id;
 
-    if (!response.audioContent) {
-      return NextResponse.json({ error: 'No se pudo generar el audio.' }, { status: 500 });
-    }
+    // 2. Trigger Background Task
+    (async () => {
+      try {
+        // Validate voice name against allowlist
+        const voice = VALID_VOICES.has(voiceName) ? voiceName : 'es-ES-Neural2-A';
 
-    // Return the audio as base64 so the client can play/download it
-    const audioBase64 = Buffer.from(response.audioContent as Uint8Array).toString('base64');
+        // Validate numeric params
+        const rate = Math.min(Math.max(parseFloat(speakingRate) || 1.0, 0.25), 4.0);
+        const pitchVal = Math.min(Math.max(parseFloat(pitch) || 0.0, -20.0), 20.0);
 
-    return NextResponse.json({ audioBase64, characterCount: text.length });
+        // Extract language code from voice name
+        const languageCode = voice.split('-').slice(0, 2).join('-');
+
+        const [response] = await ttsClient.synthesizeSpeech({
+          input: { text },
+          voice: { languageCode, name: voice },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: rate,
+            pitch: pitchVal,
+          },
+        });
+
+        if (!response.audioContent) {
+          throw new Error('No se pudo generar el audio.');
+        }
+
+        const audioBase64 = Buffer.from(response.audioContent as Uint8Array).toString('base64');
+
+        await genRef.update({
+          status: 'completed',
+          outputPayload: { audioBase64, characterCount: text.length },
+          finishedAt: new Date()
+        });
+      } catch (error: any) {
+        console.error('TTS Background Error:', error);
+        await genRef.update({
+          status: 'error',
+          error: error.message,
+          finishedAt: new Date()
+        });
+      }
+    })();
+
+    return NextResponse.json({ success: true, jobId });
   } catch (error: any) {
     console.error('TTS Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

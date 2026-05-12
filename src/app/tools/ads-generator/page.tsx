@@ -43,7 +43,7 @@ export default function AdsGeneratorPage() {
         { name: 'cta', label: 'Llamada a la acción', type: 'text' },
       ]}
       extraContent={
-        <div className="border-t bg-background mt-12 pt-12 -mx-8 px-8 rounded-b-3xl">
+        <div key="seo-content" className="border-t bg-background mt-12 pt-12 -mx-8 px-8 rounded-b-3xl">
           <ToolSEOContent 
             data={adsGeneratorSEO} 
             toolName="Generador de Anuncios"

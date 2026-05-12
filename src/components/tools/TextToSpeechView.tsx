@@ -79,13 +79,39 @@ export function TextToSpeechView() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error generando el audio');
+      if (!res.ok) throw new Error(data.error || 'Error iniciando generación');
 
-      setAudioBase64(data.audioBase64);
-      toast.success('¡Audio generado correctamente!');
+      const { jobId } = data;
+      if (!jobId) throw new Error('No se recibió el ID del trabajo.');
+
+      // Setup real-time listener
+      const { doc, onSnapshot } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase/client');
+
+      const unsubscribe = onSnapshot(doc(db, 'generations', jobId), (docSnap) => {
+        if (docSnap.exists()) {
+          const genData = docSnap.data();
+          if (genData.status === 'completed') {
+            setAudioBase64(genData.outputPayload.audioBase64);
+            setLoading(false);
+            toast.success('¡Audio generado correctamente!');
+            unsubscribe();
+          } else if (genData.status === 'error') {
+            setLoading(false);
+            toast.error('Error: ' + (genData.error || 'Error desconocido'));
+            unsubscribe();
+          }
+        }
+      });
+
+      // Safety timeout
+      setTimeout(() => {
+        unsubscribe();
+        if (loading) setLoading(false);
+      }, 180000); // 3 minutes for TTS
+
     } catch (err: any) {
       toast.error(err.message);
-    } finally {
       setLoading(false);
     }
   };

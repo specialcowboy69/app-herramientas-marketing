@@ -9,12 +9,45 @@ import {
   where, 
   orderBy, 
   serverTimestamp,
-  deleteDoc
+  deleteDoc,
+  limit,
+  startAfter,
+  DocumentSnapshot
 } from 'firebase/firestore';
 import { db } from './client';
 import { Project } from '../types';
 
 const PROJECTS_COLLECTION = 'projects';
+
+/**
+ * Scalable pagination utility using Firestore cursors.
+ */
+export const getPaginatedDocs = async (
+  collectionPath: string,
+  pageSize: number = 10,
+  lastDoc: DocumentSnapshot | null = null
+) => {
+  let q = query(
+    collection(db, collectionPath),
+    orderBy('createdAt', 'desc'),
+    limit(pageSize)
+  );
+
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
+  const querySnapshot = await getDocs(q);
+  const docs = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  return {
+    docs,
+    lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1] || null
+  };
+};
 
 export const createProject = async (userId: string, data: Partial<Project>) => {
   const projectData = {
