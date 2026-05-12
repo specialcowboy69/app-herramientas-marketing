@@ -16,10 +16,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'Faltan datos, ignorado' });
     }
 
-    let updateField = '';
-    if (toolSlug === 'customer-avatar') updateField = `products.${productId}.aiKnowledge.lastAvatar`;
-    else if (toolSlug === 'pain-points') updateField = `products.${productId}.aiKnowledge.painPoints`;
-    else if (toolSlug === 'business-idea') updateField = `products.${productId}.aiKnowledge.businessModel`;
+    // Mapa dinámico de herramientas hacia las claves de memoria del producto
+    const knowledgeMap: Record<string, string> = {
+      'business-idea': 'businessModel',
+      'customer-avatar': 'lastAvatar',
+      'pain-points': 'painPoints',
+      'naming-slogan': 'brandIdentity',
+      'framework-pas': 'pasFramework',
+      'product-description': 'productDescription',
+      'amazon-product': 'amazonListing',
+      'ads-generator': 'savedAds',
+      'cta-generator': 'savedCtas',
+      'seo-brief': 'seoStrategy',
+      'blog-toolkit': 'blogDrafts',
+      'youtube-script': 'youtubeScripts',
+      'youtube-seo': 'youtubeSeo',
+      'text-to-speech': 'voicePreferences'
+    };
+
+    const knowledgeKey = knowledgeMap[toolSlug];
+
+    if (!knowledgeKey) {
+      return NextResponse.json({ success: true, message: 'Herramienta no mapeada para aprendizaje, ignorada' });
+    }
+
+    const updateField = `products.${productId}.aiKnowledge.${knowledgeKey}`;
 
     if (updateField) {
       const projectRef = adminDb.collection('projects').doc(projectId);

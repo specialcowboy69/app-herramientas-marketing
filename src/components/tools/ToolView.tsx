@@ -274,8 +274,6 @@ export function ToolView({ title, description, toolSlug, fields, initialValues, 
 
   const triggerAILearning = async (contentToLearn: any) => {
     if (!selectedProjectId || !selectedProductId) return;
-    // Solo aprendemos de las herramientas base estratégicas
-    if (!['customer-avatar', 'pain-points', 'business-idea'].includes(toolSlug)) return;
 
     try {
       const { auth } = await import('@/lib/firebase/client');
